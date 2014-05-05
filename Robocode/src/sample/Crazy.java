@@ -37,7 +37,7 @@ public class Crazy extends AdvancedRobot {
 		while (true) {
 			// Tell the game we will want to move ahead 40000 -- some large
 			// number
-			setAhead(40000);
+			setAhead(100);
 			movingForward = true;
 			// Tell the game we will want to turn right 90
 			setTurnRight(90);
