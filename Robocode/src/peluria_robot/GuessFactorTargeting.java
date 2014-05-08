@@ -71,7 +71,10 @@ public class GuessFactorTargeting {
 		// ...
 		// (other onScannedRobot code, might be radar/movement)
 		// ...
- 
+		for(int i = 0; i<stats.length; i++){
+			System.out.print(stats[i]+" - ");
+		}
+		System.out.println();
 		// Enemy absolute bearing, you can use your one if you already declare it.
 		double absBearing = pr.getHeadingRadians() + e.getBearingRadians();
  
@@ -90,7 +93,12 @@ public class GuessFactorTargeting {
 			}
 		}
  
-		double power = 2;//Math.min(3, Math.max(.1, /* some function */));
+		// Power è settata in base alla distanza tra PeluriaRobot e l'avversario.
+		//Più è distante più il power sarà più piccolo cosi da avere colpi più veloci e perdere meno energia nel caso in cui
+		//non si colpisce l'avversario.
+		//Il valore comunque si attesterà tra 0 e 3.
+		double power =  (1 - (e.getDistance() / Math.sqrt(Math.pow(pr.getBattleFieldHeight(),2)+Math.pow(pr.getBattleFieldWidth(),2))))*3;
+				
 		// don't try to figure out the direction they're moving 
 		// they're not moving, just use the direction we had before
 		if (e.getVelocity() != 0)
