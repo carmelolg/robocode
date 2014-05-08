@@ -42,7 +42,7 @@ public class WaveSurfingMovement {
 		_surfAbsBearings = new ArrayList();
 		this.pr = pr;
 	}
-	
+
 	public void onScannedRobot(ScannedRobotEvent e) {
 		_myLocation = new Point2D.Double(pr.getX(), pr.getY());
 
@@ -81,12 +81,17 @@ public class WaveSurfingMovement {
 		doSurfing();
 
 		// gun code would go here...
+		
+		
+		//Targeting start here
 	}
+
 	public void updateWaves() {
 		for (int x = 0; x < _enemyWaves.size(); x++) {
 			EnemyWave ew = (EnemyWave) _enemyWaves.get(x);
 
-			ew.distanceTraveled = (pr.getTime() - ew.fireTime) * ew.bulletVelocity;
+			ew.distanceTraveled = (pr.getTime() - ew.fireTime)
+					* ew.bulletVelocity;
 			if (ew.distanceTraveled > _myLocation.distance(ew.fireLocation) + 50) {
 				_enemyWaves.remove(x);
 				x--;
@@ -114,6 +119,13 @@ public class WaveSurfingMovement {
 
 	// Given the EnemyWave that the bullet was on, and the point where we
 	// were hit, calculate the index into our stat array for that factor.
+
+	// Bearing l'angolo tra i due punti. Siccome il robot tende sempre ad essere
+	// perpendicolare tende sempre ad avvicinarsi a 90°
+	// TargetLocation è la posizione in cui si prevede di essere in quel
+	// vettore.
+	// Calcola la posizione dove andrai e quindi ritorna un indice per
+	// controllare in SerfStats la pericolosità di quel posto.
 	public static int getFactorIndex(EnemyWave ew, Point2D.Double targetLocation) {
 		double offsetAngle = (absoluteBearing(ew.fireLocation, targetLocation) - ew.directAngle);
 		double factor = Utils.normalRelativeAngle(offsetAngle)
@@ -237,10 +249,15 @@ public class WaveSurfingMovement {
 		double dangerRight = checkDanger(surfWave, 1);
 
 		double goAngle = absoluteBearing(surfWave.fireLocation, _myLocation);
+		// Math.PI / 4 . La funzione wallSmoothing calcola la distanza tra
+		// myLocation e un punto (in questo caso da dove il colpo è partito)
+		// diminuendo il valore da Mat.PI/2 a /4 fa si che ci teniamo più
+		// distanti dall'avversario, così da avere più probabilità di evitare i
+		// colpi.
 		if (dangerLeft < dangerRight) {
-			goAngle = wallSmoothing(_myLocation, goAngle - (Math.PI / 2), -1);
+			goAngle = wallSmoothing(_myLocation, goAngle - (Math.PI / 4), -1);
 		} else {
-			goAngle = wallSmoothing(_myLocation, goAngle + (Math.PI / 2), 1);
+			goAngle = wallSmoothing(_myLocation, goAngle + (Math.PI / 4), 1);
 		}
 
 		setBackAsFront(pr, goAngle);

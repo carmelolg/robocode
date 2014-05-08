@@ -9,6 +9,7 @@ import robocode.ScannedRobotEvent;
  */
 public class PeluriaRobot extends AdvancedRobot {
 
+	GuessFactorTargeting gft = new GuessFactorTargeting(this);
 	WaveSurfingMovement wsm = new WaveSurfingMovement(this);
 
 	public void run() {
@@ -24,6 +25,7 @@ public class PeluriaRobot extends AdvancedRobot {
 	@Override
 	public void onScannedRobot(ScannedRobotEvent event) {
 		wsm.onScannedRobot(event);
+		gft.onScannedRobot(event);
 	}
 
 	@Override
