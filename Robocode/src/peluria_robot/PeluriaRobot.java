@@ -1,5 +1,7 @@
 package peluria_robot;
 
+import java.awt.Graphics2D;
+
 import robocode.AdvancedRobot;
 import robocode.HitByBulletEvent;
 import robocode.ScannedRobotEvent;
@@ -33,4 +35,8 @@ public class PeluriaRobot extends AdvancedRobot {
 		wsm.onHitByBullet(event);
 	}
 
+	
+	@Override
+	public void onPaint(Graphics2D g) {
+	}
 }
