@@ -1,5 +1,6 @@
 package peluria_robot;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -19,7 +20,6 @@ class EnemyWave {
 	public EnemyWave() {
 	}
 
-
 }
 
 public class WaveSurfingMovement {
@@ -38,23 +38,22 @@ public class WaveSurfingMovement {
 	final int stepIndexAgo = 2;
 
 	public static double opponentEnergy = 100.0;
-	public static Rectangle2D.Double battlefieldRect ;
+	public static Rectangle2D.Double battlefieldRect;
 	// Minimum distance between Peluria-Bot and Walls
 	public static double WALL_STICK = 160;
-	 // number of max clock to look in the future used to predict the position of Peluria-Bot
-	int maxTickToLook=500;
-
-	
+	// number of max clock to look in the future used to predict the position of
+	// Peluria-Bot
+	int maxTickToLook = 500;
 
 	public WaveSurfingMovement(PeluriaRobot pr) {
 		enemyWaves = new ArrayList<EnemyWave>();
 		myDirectionsHistory = new ArrayList<Integer>();
 		absBearingsHistory = new ArrayList<Double>();
 		this.pr = pr;
-		
+
 		// Create battlefield with size less than real size
-		battlefieldRect = new java.awt.geom.Rectangle2D.Double(18, 18, pr.getBattleFieldWidth() - 36, pr.getBattleFieldHeight() - 36 );
-		
+		battlefieldRect = new java.awt.geom.Rectangle2D.Double(18, 18, pr.getBattleFieldWidth() - 36, pr.getBattleFieldHeight() - 36);
+
 	}
 
 	public void onScannedRobot(ScannedRobotEvent e) {
@@ -62,9 +61,9 @@ public class WaveSurfingMovement {
 		myLocation = new Point2D.Double(pr.getX(), pr.getY());
 
 		// Calculate lateral velocity for know the director of Peluria-Bot
-		// if >=0  1(Right) else -1(Left)
+		// if >=0 1(Right) else -1(Left)
 		double lateralVelocity = pr.getVelocity() * Math.sin(e.getBearingRadians());
-		// Calculate absolute bearing between Peluria-Bot and enemy 
+		// Calculate absolute bearing between Peluria-Bot and enemy
 		double absBearing = e.getBearingRadians() + pr.getHeadingRadians();
 
 		// Move the Radar in enemy direction
@@ -73,7 +72,7 @@ public class WaveSurfingMovement {
 		// Add in the history direction and bearing
 		myDirectionsHistory.add(0, new Integer((lateralVelocity >= 0) ? 1 : -1));
 		absBearingsHistory.add(0, new Double(absBearing + Math.PI));
-		
+
 		// Remove if the histories is > of history size
 		if (myDirectionsHistory.size() > historySize)
 			myDirectionsHistory.remove(myDirectionsHistory.size() - 1);
@@ -82,16 +81,16 @@ public class WaveSurfingMovement {
 
 		// Calculate power of bullet of Enemy
 		double bulletPower = opponentEnergy - e.getEnergy();
-		//If the enemyu shoot and Peluria-Bot have made stepIndexAgo movement
+		// If the enemyu shoot and Peluria-Bot have made stepIndexAgo movement
 		if (bulletPower < 3.01 && bulletPower > 0.09 && myDirectionsHistory.size() > stepIndexAgo) {
-			// Create and add  the wave of enemy bullet
+			// Create and add the wave of enemy bullet
 			EnemyWave ew = new EnemyWave();
 			ew.fireTime = pr.getTime() - 1;
 			ew.bulletVelocity = bulletVelocity(bulletPower);
 			ew.distanceTraveled = bulletVelocity(bulletPower);
 			ew.direction = ((Integer) myDirectionsHistory.get(stepIndexAgo)).intValue();
 			ew.directAngle = ((Double) absBearingsHistory.get(stepIndexAgo)).doubleValue();
-			ew.fireLocation = (Point2D.Double) enemyLocation.clone(); 
+			ew.fireLocation = (Point2D.Double) enemyLocation.clone();
 
 			enemyWaves.add(ew);
 		}
@@ -114,9 +113,10 @@ public class WaveSurfingMovement {
 
 			// Update the distance traveled by the bullet
 			ew.distanceTraveled = (pr.getTime() - ew.fireTime) * ew.bulletVelocity;
-			
-			// If the bullet passed Peluria-Bot remove the bullet 
-			// 50 because we have to remove the bullet that passed Peluria-Bot without hit it
+
+			// If the bullet passed Peluria-Bot remove the bullet
+			// 50 because we have to remove the bullet that passed Peluria-Bot
+			// without hit it
 			if (ew.distanceTraveled > myLocation.distance(ew.fireLocation) + 50) {
 				enemyWaves.remove(x);
 				x--;
@@ -126,14 +126,14 @@ public class WaveSurfingMovement {
 
 	// Get the nearest wave respect to Peluria-Bot
 	public EnemyWave getClosestSurfableWave() {
-		double closestDistance = Integer.MAX_VALUE; 
+		double closestDistance = Integer.MAX_VALUE;
 		EnemyWave surfWave = null;
 
 		for (int x = 0; x < enemyWaves.size(); x++) {
 			EnemyWave ew = (EnemyWave) enemyWaves.get(x);
 			double distance = myLocation.distance(ew.fireLocation) - ew.distanceTraveled;
 
-			// We skip the wave that can't avoid  (distance <= velocity)
+			// We skip the wave that can't avoid (distance <= velocity)
 			if (distance > ew.bulletVelocity && distance < closestDistance) {
 				surfWave = ew;
 				closestDistance = distance;
@@ -149,31 +149,35 @@ public class WaveSurfingMovement {
 	// vettore.
 	// Calcola la posizione dove andrai e quindi ritorna un indice per
 	// controllare in SerfStats la pericolosità di quel posto.
-	
+
 	// Perform the index of wave_stats in base of the wave and the location
 	public static int getFactorIndex(EnemyWave ew, Point2D.Double targetLocation) {
 		// Get the offset of the bearing and the angle of the bullet
-		// The bearing is between the fire location and the location 
+		// The bearing is between the fire location and the location
 		double offsetAngle = (absoluteBearing(ew.fireLocation, targetLocation) - ew.directAngle);
-		// The factor is between -1 and 1 and correspond of and index of wave_stats depends of offset angle
+		// The factor is between -1 and 1 and correspond of and index of
+		// wave_stats depends of offset angle
 		double factor = Utils.normalRelativeAngle(offsetAngle) / maxEscapeAngle(ew.bulletVelocity) * ew.direction;
 
 		// return the factor between 0 and STATS_SIZE-1
 		return (int) limit(0, (factor * ((STATS_SIZE - 1) / 2)) + ((STATS_SIZE - 1) / 2), STATS_SIZE - 1);
 	}
 
-	// Update the value of wave_stats based on the location that Peluria-Bot was hit
+	// Update the value of wave_stats based on the location that Peluria-Bot was
+	// hit
 	public void logHit(EnemyWave ew, Point2D.Double targetLocation) {
 		int index = getFactorIndex(ew, targetLocation);
 
 		for (int x = 0; x < STATS_SIZE; x++) {
-			// Increase the value with exponential formula , 1 were hit , 1/3 in the next index , 1/5 ....
+			// Increase the value with exponential formula , 1 were hit , 1/3 in
+			// the next index , 1/5 ....
 			wave_stats[x] += 1.0 / (Math.pow(index - x, 2) + 1);
 		}
 	}
 
 	public void onHitByBullet(HitByBulletEvent e) {
-		// If the enemyWaves collection is empty, we have missed the shoot of enemy
+		// If the enemyWaves collection is empty, we have missed the shoot of
+		// enemy
 		if (!enemyWaves.isEmpty()) {
 			// Get the location where Peluria-Bot was hit
 			Point2D.Double hitBulletLocation = new Point2D.Double(e.getBullet().getX(), e.getBullet().getY());
@@ -183,7 +187,8 @@ public class WaveSurfingMovement {
 			for (int x = 0; x < enemyWaves.size(); x++) {
 				EnemyWave ew = (EnemyWave) enemyWaves.get(x);
 
-					// if the bullet is near to Peluria-Bot and the velocity of the wave is ~ to the bullet velocity this bullet hit us
+				// if the bullet is near to Peluria-Bot and the velocity of the
+				// wave is ~ to the bullet velocity this bullet hit us
 				if (Math.abs(ew.distanceTraveled - myLocation.distance(ew.fireLocation)) < 50 && Math.abs(bulletVelocity(e.getBullet().getPower()) - ew.bulletVelocity) < 0.001) {
 					hitWave = ew;
 					break;
@@ -194,13 +199,12 @@ public class WaveSurfingMovement {
 				// update the value of wave_stats
 				logHit(hitWave, hitBulletLocation);
 
-				//remove this wave
+				// remove this wave
 				enemyWaves.remove(enemyWaves.lastIndexOf(hitWave));
 			}
 		}
 	}
 
-	
 	// Predict the location where Peluria-Bot go with the wave and the direction
 	public Point2D.Double predictPosition(EnemyWave surfWave, int direction) {
 		Point2D.Double predictedPosition = (Point2D.Double) myLocation.clone();
@@ -209,11 +213,11 @@ public class WaveSurfingMovement {
 		double maxTurning, moveAngle, moveDir;
 
 		int counter = 0;
-		
+
 		// True if the bullet could hit us
 		boolean intercepted = false;
 
-		do { 
+		do {
 			// Calculate the angle of movement at counter Tick
 			moveAngle = wallSmoothing(predictedPosition, absoluteBearing(surfWave.fireLocation, predictedPosition) + (direction * (Math.PI / 2)), direction) - predictedHeading;
 			moveDir = 1;
@@ -225,7 +229,7 @@ public class WaveSurfingMovement {
 
 			moveAngle = Utils.normalRelativeAngle(moveAngle);
 
-			//  you can't turn more then this in one tick
+			// you can't turn more then this in one tick
 			maxTurning = Math.PI / 720d * (40d - 3d * Math.abs(predictedVelocity));
 			predictedHeading = Utils.normalRelativeAngle(predictedHeading + limit(-maxTurning, moveAngle, maxTurning));
 
@@ -233,12 +237,14 @@ public class WaveSurfingMovement {
 			predictedVelocity += (predictedVelocity * moveDir < 0 ? 2 * moveDir : moveDir);
 			predictedVelocity = limit(-8, predictedVelocity, 8);
 
-			// calculate the  predicted position
+			// calculate the predicted position
 			predictedPosition = project(predictedPosition, predictedHeading, predictedVelocity);
 
 			counter++;
 
-			// If the distance between Peluria-Bot predicted position and the fire location is < of the distance traveled in the count Tick then the bullet could hit
+			// If the distance between Peluria-Bot predicted position and the
+			// fire location is < of the distance traveled in the count Tick
+			// then the bullet could hit
 			if (predictedPosition.distance(surfWave.fireLocation) < surfWave.distanceTraveled + (counter * surfWave.bulletVelocity) + surfWave.bulletVelocity) {
 				intercepted = true;
 			}
@@ -249,7 +255,8 @@ public class WaveSurfingMovement {
 
 	// Return the value in the wave_stats based on the wave and the direction
 	public double checkDanger(EnemyWave surfWave, int direction) {
-		// Calculate the index based on the predicted position that could hit Peluria-Bot
+		// Calculate the index based on the predicted position that could hit
+		// Peluria-Bot
 		int index = getFactorIndex(surfWave, predictPosition(surfWave, direction));
 
 		return wave_stats[index];
@@ -270,7 +277,7 @@ public class WaveSurfingMovement {
 		// The angle of Peluria-Bot turn
 		double goAngle = absoluteBearing(surfWave.fireLocation, myLocation);
 
-		//Math.PI / 4 because we want to have secure distance to the enemy
+		// Math.PI / 4 because we want to have secure distance to the enemy
 		if (dangerLeft < dangerRight) {
 			goAngle = wallSmoothing(myLocation, goAngle - (Math.PI / 4), -1);
 		} else {
@@ -286,8 +293,9 @@ public class WaveSurfingMovement {
 	// diminuendo il valore da Mat.PI/2 a /4 fa si che ci teniamo più
 	// distanti dall'avversario, così da avere più probabilità di evitare i
 	// colpi.
-	
-	// Project the location and if hit a wall move for avoid the wall changing angle
+
+	// Project the location and if hit a wall move for avoid the wall changing
+	// angle
 	public double wallSmoothing(Point2D.Double botLocation, double angle, int orientation) {
 		while (!battlefieldRect.contains(project(botLocation, angle, WALL_STICK))) {
 			angle += orientation * 0.05;
@@ -295,7 +303,7 @@ public class WaveSurfingMovement {
 		return angle;
 	}
 
-	// Project the Point 
+	// Project the Point
 	public static Point2D.Double project(Point2D.Double sourceLocation, double angle, double length) {
 		return new Point2D.Double(sourceLocation.x + Math.sin(angle) * length, sourceLocation.y + Math.cos(angle) * length);
 	}
@@ -314,7 +322,7 @@ public class WaveSurfingMovement {
 		return (20.0 - (3.0 * power));
 	}
 
-	//The largest angle that could possibly not hit a bot
+	// The largest angle that could possibly not hit a bot
 	public static double maxEscapeAngle(double velocity) {
 		return Math.asin(8.0 / velocity);
 	}
@@ -338,9 +346,49 @@ public class WaveSurfingMovement {
 			robot.setAhead(100);
 		}
 	}
-	
+
 	public void onPaint(Graphics2D g) {
-		
+		EnemyWave wave = null;
+		// try{wave=(EnemyWave)_enemyWaves.get(_enemyWaves.size()-1);}catch(Exception
+		// e){};
+		try {
+			wave = getClosestSurfableWave();
+		} catch (Exception e) {
+		}
+		;
+
+		if (wave == null)
+			return;
+		int bullet_x = (int) project(wave.fireLocation, wave.directAngle, wave.distanceTraveled).x;
+		int bullet_y = (int) project(wave.fireLocation, wave.directAngle, wave.distanceTraveled).y;
+
+		// Draw bullet
+		g.setColor(Color.RED);
+		g.drawLine((int) wave.fireLocation.x, (int) wave.fireLocation.y, bullet_x, bullet_y);
+
+		// Draw circle
+		int ray = (int) wave.fireLocation.distance(bullet_x, bullet_y) * 2;
+		g.drawOval((int) wave.fireLocation.x - (ray / 2), (int) wave.fireLocation.y - (ray / 2), ray, ray);
+
+		double max = wave_stats[0];
+		double avarage = 0;
+		for (int i = 1; i < STATS_SIZE; i++) {
+			if (max < wave_stats[i])
+				max = wave_stats[i];
+			avarage += wave_stats[i];
+		}
+		avarage /= STATS_SIZE;
+
+		// Draw wave stats
+		for (int i = -STATS_SIZE / 2; i < STATS_SIZE / 2; i++) {
+
+			int bx = (int) project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 10 + 20).x;
+			int by = (int) project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 7 + 20).y;
+
+			g.setColor(new Color((int) (wave_stats[i + STATS_SIZE / 2] / max * 255), 50, 100));
+			g.fillRect(bx, by, 5, 20);
+		}
+
 	}
 
 }
