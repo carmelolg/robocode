@@ -51,9 +51,11 @@ public class WaveSurfingMovement {
 		absBearingsHistory = new ArrayList<Double>();
 		this.pr = pr;
 
+	}
+	
+	public void init(){
 		// Create battlefield with size less than real size
 		battlefieldRect = new java.awt.geom.Rectangle2D.Double(18, 18, pr.getBattleFieldWidth() - 36, pr.getBattleFieldHeight() - 36);
-
 	}
 
 	public void onScannedRobot(ScannedRobotEvent e) {
