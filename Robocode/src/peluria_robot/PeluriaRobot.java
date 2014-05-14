@@ -38,6 +38,7 @@ public class PeluriaRobot extends AdvancedRobot {
 	
 	@Override
 	public void onPaint(Graphics2D g) {
-		wsm.onPaint(g);
+//		wsm.onPaint(g);
+		gft.onPaint(g);
 	}
 }

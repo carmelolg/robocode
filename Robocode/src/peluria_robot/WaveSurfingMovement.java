@@ -11,6 +11,13 @@ import robocode.HitByBulletEvent;
 import robocode.ScannedRobotEvent;
 import robocode.util.Utils;
 
+/*
+ *  Modificare la size bins
+ *  Fare statistiche in wave_stats invece di prendere il min tra destra e sinistra
+ *   Provare ad aumentare i tick
+ */
+
+
 class EnemyWave {
 	Point2D.Double fireLocation;
 	long fireTime;
@@ -88,8 +95,8 @@ public class WaveSurfingMovement {
 			// Create and add the wave of enemy bullet
 			EnemyWave ew = new EnemyWave();
 			ew.fireTime = pr.getTime() - 1;
-			ew.bulletVelocity = bulletVelocity(bulletPower);
-			ew.distanceTraveled = bulletVelocity(bulletPower);
+			ew.bulletVelocity = TriUtil.bulletVelocity(bulletPower);
+			ew.distanceTraveled = TriUtil.bulletVelocity(bulletPower);
 			ew.direction = ((Integer) myDirectionsHistory.get(stepIndexAgo)).intValue();
 			ew.directAngle = ((Double) absBearingsHistory.get(stepIndexAgo)).doubleValue();
 			ew.fireLocation = (Point2D.Double) enemyLocation.clone();
@@ -101,7 +108,7 @@ public class WaveSurfingMovement {
 		opponentEnergy = e.getEnergy();
 
 		// Perform the location of the enemy
-		enemyLocation = project(myLocation, absBearing, e.getDistance());
+		enemyLocation = TriUtil.project(myLocation, absBearing, e.getDistance());
 
 		updateWaves();
 		doSurfing();
@@ -156,13 +163,13 @@ public class WaveSurfingMovement {
 	public static int getFactorIndex(EnemyWave ew, Point2D.Double targetLocation) {
 		// Get the offset of the bearing and the angle of the bullet
 		// The bearing is between the fire location and the location
-		double offsetAngle = (absoluteBearing(ew.fireLocation, targetLocation) - ew.directAngle);
+		double offsetAngle = (TriUtil.absoluteBearing(ew.fireLocation, targetLocation) - ew.directAngle);
 		// The factor is between -1 and 1 and correspond of and index of
 		// wave_stats depends of offset angle
-		double factor = Utils.normalRelativeAngle(offsetAngle) / maxEscapeAngle(ew.bulletVelocity) * ew.direction;
+		double factor = Utils.normalRelativeAngle(offsetAngle) / TriUtil.maxEscapeAngle(ew.bulletVelocity) * ew.direction;
 
-		// return the factor between 0 and STATS_SIZE-1
-		return (int) limit(0, (factor * ((STATS_SIZE - 1) / 2)) + ((STATS_SIZE - 1) / 2), STATS_SIZE - 1);
+		// return the closest factor between 0 and STATS_SIZE-1
+		return (int) Math.round(TriUtil.limit(0, (factor * ((STATS_SIZE - 1) / 2)) + ((STATS_SIZE - 1) / 2), STATS_SIZE - 1));
 	}
 
 	// Update the value of wave_stats based on the location that Peluria-Bot was
@@ -191,7 +198,7 @@ public class WaveSurfingMovement {
 
 				// if the bullet is near to Peluria-Bot and the velocity of the
 				// wave is ~ to the bullet velocity this bullet hit us
-				if (Math.abs(ew.distanceTraveled - myLocation.distance(ew.fireLocation)) < 50 && Math.abs(bulletVelocity(e.getBullet().getPower()) - ew.bulletVelocity) < 0.001) {
+				if (Math.abs(ew.distanceTraveled - myLocation.distance(ew.fireLocation)) < 50 && Math.abs(TriUtil.bulletVelocity(e.getBullet().getPower()) - ew.bulletVelocity) < 0.001) {
 					hitWave = ew;
 					break;
 				}
@@ -221,7 +228,7 @@ public class WaveSurfingMovement {
 
 		do {
 			// Calculate the angle of movement at counter Tick
-			moveAngle = wallSmoothing(predictedPosition, absoluteBearing(surfWave.fireLocation, predictedPosition) + (direction * (Math.PI / 2)), direction) - predictedHeading;
+			moveAngle = wallSmoothing(predictedPosition, TriUtil.absoluteBearing(surfWave.fireLocation, predictedPosition) + (direction * (Math.PI / 2)), direction) - predictedHeading;
 			moveDir = 1;
 
 			if (Math.cos(moveAngle) < 0) {
@@ -233,14 +240,14 @@ public class WaveSurfingMovement {
 
 			// you can't turn more then this in one tick
 			maxTurning = Math.PI / 720d * (40d - 3d * Math.abs(predictedVelocity));
-			predictedHeading = Utils.normalRelativeAngle(predictedHeading + limit(-maxTurning, moveAngle, maxTurning));
+			predictedHeading = Utils.normalRelativeAngle(predictedHeading + TriUtil.limit(-maxTurning, moveAngle, maxTurning));
 
 			// If moveDir > 0 we increment the velocity of 1 else 2
 			predictedVelocity += (predictedVelocity * moveDir < 0 ? 2 * moveDir : moveDir);
-			predictedVelocity = limit(-8, predictedVelocity, 8);
+			predictedVelocity = TriUtil.limit(-8, predictedVelocity, 8);
 
 			// calculate the predicted position
-			predictedPosition = project(predictedPosition, predictedHeading, predictedVelocity);
+			predictedPosition = TriUtil.project(predictedPosition, predictedHeading, predictedVelocity);
 
 			counter++;
 
@@ -277,7 +284,7 @@ public class WaveSurfingMovement {
 		double dangerRight = checkDanger(surfWave, 1);
 
 		// The angle of Peluria-Bot turn
-		double goAngle = absoluteBearing(surfWave.fireLocation, myLocation);
+		double goAngle = TriUtil.absoluteBearing(surfWave.fireLocation, myLocation);
 
 		// Math.PI / 4 because we want to have secure distance to the enemy
 		if (dangerLeft < dangerRight) {
@@ -299,35 +306,12 @@ public class WaveSurfingMovement {
 	// Project the location and if hit a wall move for avoid the wall changing
 	// angle
 	public double wallSmoothing(Point2D.Double botLocation, double angle, int orientation) {
-		while (!battlefieldRect.contains(project(botLocation, angle, WALL_STICK))) {
+		while (!battlefieldRect.contains(TriUtil.project(botLocation, angle, WALL_STICK))) {
 			angle += orientation * 0.05;
 		}
 		return angle;
 	}
 
-	// Project the Point
-	public static Point2D.Double project(Point2D.Double sourceLocation, double angle, double length) {
-		return new Point2D.Double(sourceLocation.x + Math.sin(angle) * length, sourceLocation.y + Math.cos(angle) * length);
-	}
-
-	public static double absoluteBearing(Point2D.Double source, Point2D.Double target) {
-		return Math.atan2(target.x - source.x, target.y - source.y);
-	}
-
-	// return value if > min and < max else return min if < min or max if > max
-	public static double limit(double min, double value, double max) {
-		return Math.max(min, Math.min(value, max));
-	}
-
-	// Give power return the velocity of bullet
-	public static double bulletVelocity(double power) {
-		return (20.0 - (3.0 * power));
-	}
-
-	// The largest angle that could possibly not hit a bot
-	public static double maxEscapeAngle(double velocity) {
-		return Math.asin(8.0 / velocity);
-	}
 
 	// Move the robot in the goAngle direction
 	public static void setBackAsFront(AdvancedRobot robot, double goAngle) {
@@ -361,8 +345,8 @@ public class WaveSurfingMovement {
 
 		if (wave == null)
 			return;
-		int bullet_x = (int) project(wave.fireLocation, wave.directAngle, wave.distanceTraveled).x;
-		int bullet_y = (int) project(wave.fireLocation, wave.directAngle, wave.distanceTraveled).y;
+		int bullet_x = (int) TriUtil.project(wave.fireLocation, wave.directAngle, wave.distanceTraveled).x;
+		int bullet_y = (int) TriUtil.project(wave.fireLocation, wave.directAngle, wave.distanceTraveled).y;
 
 		// Draw bullet
 		g.setColor(Color.RED);
@@ -384,8 +368,8 @@ public class WaveSurfingMovement {
 		// Draw wave stats
 		for (int i = -STATS_SIZE / 2; i < STATS_SIZE / 2; i++) {
 
-			int bx = (int) project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 10 + 20).x;
-			int by = (int) project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 7 + 20).y;
+			int bx = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 10 + 20).x;
+			int by = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 7 + 20).y;
 
 			g.setColor(new Color((int) (wave_stats[i + STATS_SIZE / 2] / max * 255), 50, 100));
 			g.fillRect(bx, by, 5, 20);
