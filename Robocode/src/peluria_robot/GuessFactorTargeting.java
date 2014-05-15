@@ -19,6 +19,10 @@ class WaveBullet {
 	public int direction;
 	// Guess Factor of the targeting
 	private int[] stats;
+	// Distance of the enemy when fire
+	public double enemyDistance;
+	// GuessFactor used when fire bullet
+	public double GF;
 
 	public WaveBullet(double x, double y, double bearing, double power, int direction, long time, int[] stats) {
 		this.startX = x;
@@ -122,7 +126,8 @@ public class GuessFactorTargeting {
 		}
 
 		// show something else later
-		WaveBullet newWave = new WaveBullet(pr.getX(), pr.getY(), absBearing, power, direction, pr.getTime(), stats);
+		WaveBullet newWave = new WaveBullet(myLocation.x, myLocation.y, absBearing, power, direction, pr.getTime(), stats);
+		newWave.enemyDistance=e.getDistance();
 
 		// Calculate the guess factor, start to head on enemy
 		int bestindex = (STATS_SIZE-1) /2;
@@ -132,6 +137,7 @@ public class GuessFactorTargeting {
 
 		// Perform the Guess Factor angle from the best index
 		double guessfactor = (double) (bestindex - (stats.length - 1) / 2) / ((stats.length - 1) / 2);
+		newWave.GF=guessfactor;
 
 		// Perform the angle of shoot based on the guess factor and the bearing
 		// with the enemy
@@ -161,34 +167,21 @@ public class GuessFactorTargeting {
 	
 	
 	public void onPaint(Graphics2D g) {
-		
 		WaveBullet wave=null;
-		try{wave=waves.get(waves.size()-1);}catch(Exception e){}
-		if(wave==null)return ;
+		try{wave=waves.get(waves.size()-1);}catch(Exception e){return ;};
 		
-		int bestindex = (STATS_SIZE-1) /2;
-		for (int i = 0; i < STATS_SIZE; i++)
-			if (stats[bestindex] < stats[i])
-				bestindex = i;
+		g.setColor(Color.GREEN);
+		int enemyX=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing,wave.enemyDistance).x;
+		int enemyY=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing,wave.enemyDistance).y;
 		
-		System.out.println("BEST "+bestindex);
+		int enemyMEAX=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction,wave.enemyDistance).x;
+		int enemyMEAY=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction,wave.enemyDistance).y;
 
-		double guessfactor = (double) (bestindex - (stats.length - 1) / 2) / ((stats.length - 1) / 2);
-
-		double angleOffset = wave.direction * guessfactor * wave.maxEscapeAngle();
-		double gunAdjust = Utils.normalRelativeAngle(wave.bearing  + angleOffset);
-		double gunAdjustNoOffset = Utils.normalRelativeAngle(wave.bearing );
-
-		Point2D.Double point=new Double();
-		point=TriUtil.project(new Point2D.Double(wave.startX, wave.startY), gunAdjust, 400*wave.direction);
-		Point2D.Double point2=new Double();
-		point2=TriUtil.project(new Point2D.Double(wave.startX, wave.startY), gunAdjustNoOffset, 400*wave.direction);
+		g.drawLine(enemyX, enemyY, enemyMEAX, enemyMEAY);
 		
-		g.setColor(Color.BLUE);
-		g.drawLine((int)wave.startX, (int)wave.startY,(int)point.x,(int) point.y);
+		int bulletX=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction*wave.GF,wave.enemyDistance).x;
+		int bulletY=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction*wave.GF,wave.enemyDistance).y;
+		g.fillRect(bulletX, bulletY, 10, 10);
 		
-		g.setColor(Color.RED);
-		g.drawLine((int)wave.startX, (int)wave.startY,(int)point2.x,(int) point2.y);
-
 	}
 }

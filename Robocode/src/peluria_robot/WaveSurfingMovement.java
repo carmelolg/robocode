@@ -357,23 +357,26 @@ public class WaveSurfingMovement {
 		g.drawOval((int) wave.fireLocation.x - (ray / 2), (int) wave.fireLocation.y - (ray / 2), ray, ray);
 
 		double max = wave_stats[0];
-		double avarage = 0;
 		for (int i = 1; i < STATS_SIZE; i++) {
 			if (max < wave_stats[i])
 				max = wave_stats[i];
-			avarage += wave_stats[i];
 		}
-		avarage /= STATS_SIZE;
+
 
 		// Draw wave stats
 		for (int i = -STATS_SIZE / 2; i < STATS_SIZE / 2; i++) {
 
-			int bx = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 10 + 20).x;
-			int by = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 7 + 20).y;
-
+			int bx = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 5 ).x;
+			int by = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 5 ).y;
+			
+			g.translate(bx, by);
+			g.rotate( -wave.directAngle);
 			g.setColor(new Color((int) (wave_stats[i + STATS_SIZE / 2] / max * 255), 50, 100));
-			g.fillRect(bx, by, 5, 20);
+			g.fillRect(0, 0, 3, 20);
+			g.rotate( +wave.directAngle  );
+			g.translate(-bx, -by);
 		}
+
 
 	}
 
