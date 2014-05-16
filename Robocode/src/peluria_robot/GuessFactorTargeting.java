@@ -140,7 +140,7 @@ public class GuessFactorTargeting {
 				bestindex = i;
 
 		// Perform the Guess Factor angle from the best index
-		double guessfactor = (double) (bestindex - (stats.length - 1) / 2) / ((stats.length - 1) / 2);
+		double guessfactor = (double) (bestindex - (STATS_SIZE - 1) / 2) / ((STATS_SIZE - 1) / 2);
 		newWave.GF=guessfactor;
 
 		// Perform the angle of shoot based on the guess factor and the bearing
