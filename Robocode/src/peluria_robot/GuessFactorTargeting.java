@@ -3,9 +3,11 @@ package peluria_robot;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
-import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.TreeMap;
 
 import robocode.ScannedRobotEvent;
 import robocode.util.Utils;
@@ -23,7 +25,7 @@ class WaveBullet {
 	public double enemyDistance;
 	// GuessFactor used when fire bullet
 	public double GF;
-
+	
 	public WaveBullet(double x, double y, double bearing, double power, int direction, long time, int[] stats) {
 		this.startX = x;
 		this.startY = y;
@@ -58,6 +60,7 @@ class WaveBullet {
 			// accuracy of the future firing
 			int index = (int) Math.round((stats.length - 1) / 2 * (guessFactor + 1));
 			stats[index]++;
+			
 
 			return true;
 		}
@@ -70,6 +73,7 @@ public class GuessFactorTargeting {
 	List<WaveBullet> waves = new ArrayList<WaveBullet>();
 	// Peluria-Bot
 	PeluriaRobot pr;
+	
 
 	// The vector of stats of the bullet fired
 	final static int STATS_SIZE = 31;
@@ -80,7 +84,7 @@ public class GuessFactorTargeting {
 	Point2D.Double enemyLocation = new Point2D.Double();
 
 	// Threshold for the bullet power
-	double energyThreshold = 20;
+	double energyThreshold = 10;
 
 	// Current enemy direction
 	int direction = 1;
@@ -158,7 +162,7 @@ public class GuessFactorTargeting {
 	// non si colpisce l'avversario.
 	// Il valore comunque si attesterà tra 0 e 3.
 	double getBulletPower(double distance) {
-		double maxPower = 2;
+		double maxPower = 3;
 		if (pr.getEnergy() < energyThreshold)
 			maxPower = 0.2;
 
@@ -182,6 +186,7 @@ public class GuessFactorTargeting {
 		int bulletX=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction*wave.GF,wave.enemyDistance).x;
 		int bulletY=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction*wave.GF,wave.enemyDistance).y;
 		g.fillRect(bulletX, bulletY, 10, 10);
+		
 		
 	}
 }
