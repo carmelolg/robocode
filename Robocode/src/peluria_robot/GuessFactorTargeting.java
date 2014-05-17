@@ -77,7 +77,9 @@ public class GuessFactorTargeting {
 
 	// The vector of stats of the bullet fired
 	final static int STATS_SIZE = 31;
-	static int[] stats = new int[STATS_SIZE];
+	final static int SEG_DISTANCE_SIZE = 5;
+	final static int SEG_VELOCITY_SIZE = 5;
+	static int[][][] stats = new int[SEG_VELOCITY_SIZE][SEG_DISTANCE_SIZE][STATS_SIZE];
 
 	// Location of Peluria-Bot and enemy
 	Point2D.Double myLocation = new Point2D.Double();
@@ -128,15 +130,18 @@ public class GuessFactorTargeting {
 			else
 				direction = 1;
 		}
+		
+		
+		int segmentedStats[]=getSegmentatedStats(e.getDistance(),e.getVelocity());
 
 		// show something else later
-		WaveBullet newWave = new WaveBullet(myLocation.x, myLocation.y, absBearing, power, direction, pr.getTime(), stats);
+		WaveBullet newWave = new WaveBullet(myLocation.x, myLocation.y, absBearing, power, direction, pr.getTime(), segmentedStats);
 		newWave.enemyDistance=e.getDistance();
 
 		// Calculate the guess factor, start to head on enemy
 		int bestindex = (STATS_SIZE-1) /2;
 		for (int i = 0; i < STATS_SIZE; i++)
-			if (stats[bestindex] < stats[i])
+			if (segmentedStats[bestindex] < segmentedStats[i])
 				bestindex = i;
 
 		// Perform the Guess Factor angle from the best index
@@ -155,6 +160,13 @@ public class GuessFactorTargeting {
 			waves.add(newWave);
 	}
 
+	private int[] getSegmentatedStats(double distance, double velocity) {
+		int indexDistance=(int)(distance/getMaxDIstance()*(SEG_DISTANCE_SIZE-1));
+		int indexVelocity=(int)(Math.abs(velocity)/8.0*(SEG_DISTANCE_SIZE-1));
+		
+		return stats[indexDistance][indexVelocity];
+	}
+
 	// Power è settata in base alla distanza tra PeluriaRobot e
 	// l'avversario.
 	// Più è distante più il power sarà più piccolo cosi da avere colpi più
@@ -167,6 +179,10 @@ public class GuessFactorTargeting {
 			maxPower = 0.2;
 
 		return (1 - (distance / Math.sqrt(Math.pow(pr.getBattleFieldHeight(), 2) + Math.pow(pr.getBattleFieldWidth(), 2)))) * maxPower;
+	}
+	
+	double getMaxDIstance(){
+		return Math.sqrt(Math.pow(pr.getBattleFieldHeight(), 2) + Math.pow(pr.getBattleFieldWidth(), 2));
 	}
 	
 	
