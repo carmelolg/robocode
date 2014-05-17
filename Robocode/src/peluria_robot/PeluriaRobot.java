@@ -4,6 +4,7 @@ import java.awt.Graphics2D;
 
 import robocode.AdvancedRobot;
 import robocode.HitByBulletEvent;
+import robocode.RobotDeathEvent;
 import robocode.ScannedRobotEvent;
 
 /**
@@ -12,16 +13,22 @@ import robocode.ScannedRobotEvent;
 public class PeluriaRobot extends AdvancedRobot {
 
 	GuessFactorTargeting gft = new GuessFactorTargeting(this);
-	WaveSurfingMovement wsm = new WaveSurfingMovement(this);
+	MinimumRiskMovement wsm = new MinimumRiskMovement(this);
+//	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
 
 	public void run() {
+		wsm.init();
 
 		setAdjustGunForRobotTurn(true);
 		setAdjustRadarForGunTurn(true);
-		wsm.init();
-		do {
-			turnRadarRightRadians(Double.POSITIVE_INFINITY);
-		} while (true);
+		setAdjustRadarForRobotTurn(true);
+
+		turnRadarRightRadians(2*Math.PI);
+		
+		for(;;){
+			wsm.run();
+			execute();
+		}
 	}
 
 	@Override
@@ -33,6 +40,11 @@ public class PeluriaRobot extends AdvancedRobot {
 	@Override
 	public void onHitByBullet(HitByBulletEvent event) {
 		wsm.onHitByBullet(event);
+	}
+	
+	@Override
+	public void onRobotDeath(RobotDeathEvent e) {
+		wsm.onRobotDeath(e);
 	}
 
 	

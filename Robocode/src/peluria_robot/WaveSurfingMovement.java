@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 import robocode.AdvancedRobot;
 import robocode.HitByBulletEvent;
+import robocode.RobotDeathEvent;
 import robocode.ScannedRobotEvent;
 import robocode.util.Utils;
 
@@ -378,6 +379,13 @@ public class WaveSurfingMovement {
 		}
 
 
+	}
+
+	public void run() {
+		
+	}
+
+	public void onRobotDeath(RobotDeathEvent e) {
 	}
 
 }
