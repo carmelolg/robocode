@@ -44,7 +44,7 @@ public class MinimumRiskMovement {
 
 		myLocation = new Point2D.Double(pr.getX(), pr.getY());
 		myEnergy = pr.getEnergy();
-		pr.turnRadarRightRadians(2*Math.PI);
+		pr.setTurnRadarRightRadians(2*Math.PI);
 
 		
 		if(target.live && pr.getTime()>9) {
@@ -161,6 +161,7 @@ public class MinimumRiskMovement {
 		Point2D.Double testPoint;
 		int i=0;
 		double distanceToTarget = myLocation.distance(target.location);
+		double max=0;
 
 		ArrayList<Point2D.Double> points=new ArrayList<Point2D.Double>();
 		do {
@@ -170,11 +171,13 @@ public class MinimumRiskMovement {
 			testPoint = TriUtil.project(myLocation, 2*Math.PI*Math.random(), Math.min(distanceToTarget*0.8, 100 + 200*Math.random()));
 			if(battleField.contains(testPoint))
 				points.add(testPoint);
+			if(riskEvaluation(testPoint, addLast)>max)
+				max=riskEvaluation(testPoint, addLast);
 		} while(i++ < 200);
 		
 		for(Point2D.Double p : points){
-			g.setColor(new Color(0,100,255));
-			g.drawRect((int)p.x, (int)p.y, 10, 10);
+			g.setColor(new Color((int)(riskEvaluation(p, addLast)/max * 255),100,255));
+			g.fillRect((int)p.x, (int)p.y, 5, 5);
 		}
 	}
 

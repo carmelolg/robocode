@@ -23,7 +23,7 @@ public class PeluriaRobot extends AdvancedRobot {
 		setAdjustRadarForGunTurn(true);
 		setAdjustRadarForRobotTurn(true);
 
-		turnRadarRightRadians(2*Math.PI);
+		setTurnRadarRightRadians(2*Math.PI);
 		
 		for(;;){
 			wsm.run();
