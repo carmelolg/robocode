@@ -12,9 +12,10 @@ import robocode.ScannedRobotEvent;
  */
 public class PeluriaRobot extends AdvancedRobot {
 
-	GuessFactorTargeting gft = new GuessFactorTargeting(this);
+//	GuessFactorTargeting gft = new GuessFactorTargeting(this);
 	MinimumRiskMovement wsm = new MinimumRiskMovement(this);
 //	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
+	MeleeTargeting gft = new MeleeTargeting(this);
 
 	public void run() {
 		wsm.init();
@@ -40,11 +41,13 @@ public class PeluriaRobot extends AdvancedRobot {
 	@Override
 	public void onHitByBullet(HitByBulletEvent event) {
 		wsm.onHitByBullet(event);
+		gft.onHitByBullet(event);
 	}
 	
 	@Override
 	public void onRobotDeath(RobotDeathEvent e) {
 		wsm.onRobotDeath(e);
+		gft.onRobotDeath(e);
 	}
 
 	
