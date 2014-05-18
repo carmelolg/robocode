@@ -47,6 +47,7 @@ public class PeluriaRobot extends AdvancedRobot {
 	@Override
 	public void onRobotDeath(RobotDeathEvent e) {
 		wsm.onRobotDeath(e);
+		gft.onRobotDeath(e);
 	}
 
 	
