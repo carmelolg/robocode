@@ -25,8 +25,9 @@ class WaveBullet {
 	public double enemyDistance;
 	// GuessFactor used when fire bullet
 	public double GF;
-	
-	public WaveBullet(double x, double y, double bearing, double power, int direction, long time, int[] stats) {
+
+	public WaveBullet(double x, double y, double bearing, double power,
+			int direction, long time, int[] stats) {
 		this.startX = x;
 		this.startY = y;
 		this.bearing = bearing;
@@ -45,22 +46,27 @@ class WaveBullet {
 		// If the distance of the fire location and the enemy location is <= of
 		// the distance traveled of the
 		// bullet then the bullet could hit the enemy
-		if (Point2D.distance(startX, startY, enemyX, enemyY) <= (currentTime - fireTime) * TriUtil.bulletVelocity(power)) {
+		if (Point2D.distance(startX, startY, enemyX, enemyY) <= (currentTime - fireTime)
+				* TriUtil.bulletVelocity(power)) {
 
 			// The bearing between fire location and the enemy location
-			double desiredAngle = TriUtil.absoluteBearing(startX, startY, enemyX, enemyY);
+			double desiredAngle = TriUtil.absoluteBearing(startX, startY,
+					enemyX, enemyY);
 			// The angle offset between the angle of bullet fired and the angle
 			// of enemy
-			double angleOffset = Utils.normalRelativeAngle(desiredAngle - bearing);
+			double angleOffset = Utils.normalRelativeAngle(desiredAngle
+					- bearing);
 			// Calculate the guess factor between -1 and 1 , 0 if we hit the
 			// enemy.
-			double guessFactor = TriUtil.limit(-1, angleOffset / maxEscapeAngle(), 1) * direction;
+			double guessFactor = TriUtil.limit(-1, angleOffset
+					/ maxEscapeAngle(), 1)
+					* direction;
 
 			// Betwen 0 and stats.length-1. The index for improvement the
 			// accuracy of the future firing
-			int index = (int) Math.round((stats.length - 1) / 2 * (guessFactor + 1));
+			int index = (int) Math.round((stats.length - 1) / 2
+					* (guessFactor + 1));
 			stats[index]++;
-			
 
 			return true;
 		}
@@ -73,7 +79,6 @@ public class GuessFactorTargeting {
 	List<WaveBullet> waves = new ArrayList<WaveBullet>();
 	// Peluria-Bot
 	PeluriaRobot pr;
-	
 
 	// The vector of stats of the bullet fired
 	final static int STATS_SIZE = 31;
@@ -105,7 +110,8 @@ public class GuessFactorTargeting {
 		myLocation.y = pr.getY();
 
 		// Enemy Location
-		enemyLocation = TriUtil.project(myLocation, absBearing, e.getDistance());
+		enemyLocation = TriUtil
+				.project(myLocation, absBearing, e.getDistance());
 		double ex = enemyLocation.x;
 		double ey = enemyLocation.y;
 
@@ -121,7 +127,6 @@ public class GuessFactorTargeting {
 		// Perform the power of bullet
 		double power = getBulletPower(e.getDistance());
 
-
 		// Perform the direction of enemy , if enemy don't move take the
 		// previous direction
 		if (e.getVelocity() != 0) {
@@ -130,40 +135,48 @@ public class GuessFactorTargeting {
 			else
 				direction = 1;
 		}
-		
-		
-		int segmentedStats[]=getSegmentatedStats(e.getDistance(),e.getVelocity());
+
+		int segmentedStats[] = getSegmentatedStats(e.getDistance(),
+				e.getVelocity());
 
 		// show something else later
-		WaveBullet newWave = new WaveBullet(myLocation.x, myLocation.y, absBearing, power, direction, pr.getTime(), segmentedStats);
-		newWave.enemyDistance=e.getDistance();
+		WaveBullet newWave = new WaveBullet(myLocation.x, myLocation.y,
+				absBearing, power, direction, pr.getTime(), segmentedStats);
+		newWave.enemyDistance = e.getDistance();
 
-		// Calculate the guess factor, start to head on enemy
-		int bestindex = (STATS_SIZE-1) /2;
-		for (int i = 0; i < STATS_SIZE; i++)
-			if (segmentedStats[bestindex] < segmentedStats[i])
-				bestindex = i;
-
+		int bestindex = (STATS_SIZE - 1) / 2;
+		if (e.getEnergy() == 0) {
+			bestindex = (STATS_SIZE - 1) / 2;
+		} else {
+			// Calculate the guess factor, start to head on enemy
+			for (int i = 0; i < STATS_SIZE; i++)
+				if (segmentedStats[bestindex] < segmentedStats[i])
+					bestindex = i;
+		}
 		// Perform the Guess Factor angle from the best index
-		double guessfactor = (double) (bestindex - (STATS_SIZE - 1) / 2) / ((STATS_SIZE - 1) / 2);
-		newWave.GF=guessfactor;
+		double guessfactor = (double) (bestindex - (STATS_SIZE - 1) / 2)
+				/ ((STATS_SIZE - 1) / 2);
+		newWave.GF = guessfactor;
 
 		// Perform the angle of shoot based on the guess factor and the bearing
 		// with the enemy
 		double angleOffset = direction * guessfactor * newWave.maxEscapeAngle();
-		double gunAdjust = Utils.normalRelativeAngle(absBearing - pr.getGunHeadingRadians() + angleOffset);
+		double gunAdjust = Utils.normalRelativeAngle(absBearing
+				- pr.getGunHeadingRadians() + angleOffset);
 
 		pr.setTurnGunRightRadians(gunAdjust);
 
-		// If Peluria-Bot cannon is cold and gun doesn't have to turn anymore or by just a very small amount.
-		if (pr.getGunHeat() == 0 && gunAdjust < Math.atan2(9, e.getDistance()) && pr.setFireBullet(power) != null)
+		// If Peluria-Bot cannon is cold and gun doesn't have to turn anymore or
+		// by just a very small amount.
+		if (pr.getGunHeat() == 0 && gunAdjust < Math.atan2(9, e.getDistance())
+				&& pr.setFireBullet(power) != null)
 			waves.add(newWave);
 	}
 
 	private int[] getSegmentatedStats(double distance, double velocity) {
-		int indexDistance=(int)(distance/getMaxDIstance()*(SEG_DISTANCE_SIZE-1));
-		int indexVelocity=(int)(Math.abs(velocity)/8.0*(SEG_DISTANCE_SIZE-1));
-		
+		int indexDistance = (int) (distance / getMaxDIstance() * (SEG_DISTANCE_SIZE - 1));
+		int indexVelocity = (int) (Math.abs(velocity) / 8.0 * (SEG_DISTANCE_SIZE - 1));
+
 		return stats[indexDistance][indexVelocity];
 	}
 
@@ -178,31 +191,48 @@ public class GuessFactorTargeting {
 		if (pr.getEnergy() < energyThreshold)
 			maxPower = 0.2;
 
-		return (1 - (distance / Math.sqrt(Math.pow(pr.getBattleFieldHeight(), 2) + Math.pow(pr.getBattleFieldWidth(), 2)))) * maxPower;
+		return (1 - (distance / Math
+				.sqrt(Math.pow(pr.getBattleFieldHeight(), 2)
+						+ Math.pow(pr.getBattleFieldWidth(), 2))))
+				* maxPower;
 	}
-	
-	double getMaxDIstance(){
-		return Math.sqrt(Math.pow(pr.getBattleFieldHeight(), 2) + Math.pow(pr.getBattleFieldWidth(), 2));
+
+	double getMaxDIstance() {
+		return Math.sqrt(Math.pow(pr.getBattleFieldHeight(), 2)
+				+ Math.pow(pr.getBattleFieldWidth(), 2));
 	}
-	
-	
+
 	public void onPaint(Graphics2D g) {
-		WaveBullet wave=null;
-		try{wave=waves.get(waves.size()-1);}catch(Exception e){return ;};
-		
+		WaveBullet wave = null;
+		try {
+			wave = waves.get(waves.size() - 1);
+		} catch (Exception e) {
+			return;
+		}
+		;
+
 		g.setColor(Color.GREEN);
-		int enemyX=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing,wave.enemyDistance).x;
-		int enemyY=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing,wave.enemyDistance).y;
-		
-		int enemyMEAX=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction,wave.enemyDistance).x;
-		int enemyMEAY=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction,wave.enemyDistance).y;
+		int enemyX = (int) TriUtil.project(new Point2D.Double(wave.startX,
+				wave.startY), wave.bearing, wave.enemyDistance).x;
+		int enemyY = (int) TriUtil.project(new Point2D.Double(wave.startX,
+				wave.startY), wave.bearing, wave.enemyDistance).y;
+
+		int enemyMEAX = (int) TriUtil.project(new Point2D.Double(wave.startX,
+				wave.startY), wave.bearing + wave.maxEscapeAngle()
+				* wave.direction, wave.enemyDistance).x;
+		int enemyMEAY = (int) TriUtil.project(new Point2D.Double(wave.startX,
+				wave.startY), wave.bearing + wave.maxEscapeAngle()
+				* wave.direction, wave.enemyDistance).y;
 
 		g.drawLine(enemyX, enemyY, enemyMEAX, enemyMEAY);
-		
-		int bulletX=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction*wave.GF,wave.enemyDistance).x;
-		int bulletY=(int)TriUtil.project(new Point2D.Double(wave.startX, wave.startY), wave.bearing+wave.maxEscapeAngle()*wave.direction*wave.GF,wave.enemyDistance).y;
+
+		int bulletX = (int) TriUtil.project(new Point2D.Double(wave.startX,
+				wave.startY), wave.bearing + wave.maxEscapeAngle()
+				* wave.direction * wave.GF, wave.enemyDistance).x;
+		int bulletY = (int) TriUtil.project(new Point2D.Double(wave.startX,
+				wave.startY), wave.bearing + wave.maxEscapeAngle()
+				* wave.direction * wave.GF, wave.enemyDistance).y;
 		g.fillRect(bulletX, bulletY, 10, 10);
-		
-		
+
 	}
 }
