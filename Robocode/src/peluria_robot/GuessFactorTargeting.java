@@ -173,6 +173,7 @@ public class GuessFactorTargeting {
 			waves.add(newWave);
 	}
 
+	// Return segmented stats
 	private int[] getSegmentatedStats(double distance, double velocity) {
 		int indexDistance = (int) (distance / getMaxDIstance() * (SEG_DISTANCE_SIZE - 1));
 		int indexVelocity = (int) (Math.abs(velocity) / 8.0 * (SEG_DISTANCE_SIZE - 1));

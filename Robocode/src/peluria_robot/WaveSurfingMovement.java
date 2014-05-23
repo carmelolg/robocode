@@ -30,10 +30,10 @@ class EnemyWave {
 
 }
 
-public class WaveSurfingMovement {
+public class WaveSurfingMovement implements BotMovement{
 
 	PeluriaRobot pr;
-	public static int STATS_SIZE = 47;
+	public static int STATS_SIZE = 105;
 	public static double wave_stats[] = new double[STATS_SIZE];
 	public Point2D.Double myLocation; // our bot's location
 	public Point2D.Double enemyLocation; // enemy bot's location
@@ -367,12 +367,12 @@ public class WaveSurfingMovement {
 		// Draw wave stats
 		for (int i = -STATS_SIZE / 2; i < STATS_SIZE / 2; i++) {
 
-			int bx = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 5 ).x;
-			int by = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i * 5 ).y;
+			int bx = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i  * Math.min(wave.distanceTraveled/50,4) ).x;
+			int by = (int) TriUtil.project(new Point2D.Double(bullet_x, bullet_y), wave.directAngle + Math.PI / 2, i  * Math.min(wave.distanceTraveled/50,4) ).y;
 			
 			g.translate(bx, by);
 			g.rotate( -wave.directAngle);
-			g.setColor(new Color((int) (wave_stats[i + STATS_SIZE / 2] / max * 255), 50, 100));
+			g.setColor(new Color((int) ( (wave_stats[i + STATS_SIZE / 2] / max ) * 255), 50, 100));
 			g.fillRect(0, 0, 3, 20);
 			g.rotate( +wave.directAngle  );
 			g.translate(-bx, -by);

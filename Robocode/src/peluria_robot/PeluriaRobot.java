@@ -12,13 +12,13 @@ import robocode.ScannedRobotEvent;
  */
 public class PeluriaRobot extends AdvancedRobot {
 
-	GuessFactorTargeting gft = new GuessFactorTargeting(this);
-	MinimumRiskMovement wsm = new MinimumRiskMovement(this);
+	GuessFactorTargeting mt = new GuessFactorTargeting(this);
+	BotMovement movement = new MinimumRiskMovement(this);
 //	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
-	MeleeTargeting mt = new MeleeTargeting(this, gft);
+//	MeleeTargeting mt = new MeleeTargeting(this, gft);
 
 	public void run() {
-		wsm.init();
+		movement.init();
 
 		setAdjustGunForRobotTurn(true);
 		setAdjustRadarForGunTurn(true);
@@ -27,33 +27,39 @@ public class PeluriaRobot extends AdvancedRobot {
 		setTurnRadarRightRadians(2*Math.PI);
 		
 		for(;;){
-			wsm.run();
+			movement.run();
 			execute();
 		}
 	}
 
 	@Override
 	public void onScannedRobot(ScannedRobotEvent event) {
-		wsm.onScannedRobot(event);
+		movement.onScannedRobot(event);
 		mt.onScannedRobot(event);
 	}
 
 	@Override
 	public void onHitByBullet(HitByBulletEvent event) {
-		wsm.onHitByBullet(event);
-		mt.onHitByBullet(event);
+		movement.onHitByBullet(event);
+//		mt.onHitByBullet(event);
 	}
 	
 	@Override
 	public void onRobotDeath(RobotDeathEvent e) {
-		wsm.onRobotDeath(e);
-		mt.onRobotDeath(e);
+		movement.onRobotDeath(e);
+//		mt.onRobotDeath(e);
 	}
 
 	
 	@Override
 	public void onPaint(Graphics2D g) {
-		wsm.onPaint(g);
+		movement.onPaint(g);
 		mt.onPaint(g);
+	}
+	
+	public void changeWaveMovement(){
+		if(movement instanceof WaveSurfingMovement)return;
+		movement = new WaveSurfingMovement(this);
+		movement.init();
 	}
 }
