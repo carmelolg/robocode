@@ -382,6 +382,8 @@ public class WaveSurfingMovement implements BotMovement{
 	}
 
 	public void run() {
+		if(enemyLocation==null)
+			pr.setTurnRadarRightRadians(Math.PI *2  );
 		
 	}
 
