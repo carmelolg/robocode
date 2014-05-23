@@ -52,7 +52,7 @@ public class MeleeTargeting {
 	// this is THE enemy that we want to fire.
 	Enemy target;
 	// This is the class of the MELEE Movement, with the strategy Minimum Risk
-	MinimumRiskMovement mrm;
+	BotMovement mrm;
 
 	// Here, we have two threshold.
 	// The second one is relative at the distance between Peluria Robot and
@@ -63,7 +63,7 @@ public class MeleeTargeting {
 	// this threshold
 	double dangerousThreshold = 20;
 
-	public MeleeTargeting(PeluriaRobot pr, MinimumRiskMovement mrm) {
+	public MeleeTargeting(PeluriaRobot pr, BotMovement mrm) {
 		this.pr = pr;
 		mapOfEnemy = new HashMap<String, Enemy>();
 		mapOfGuessFactor = new HashMap<String, GuessFactorTargeting>();

@@ -6,182 +6,258 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import robocode.HitByBulletEvent;
 import robocode.RobotDeathEvent;
 import robocode.ScannedRobotEvent;
-import robocode.TurnCompleteCondition;
 import robocode.util.Utils;
 
-public class MinimumRiskMovement {
+
+public class MinimumRiskMovement implements BotMovement {
+
+	// Map Name , Enemy
+	HashMap<String, EnemyInfo> enemies = new HashMap<String, EnemyInfo>();
+	// The current enemy target
+	EnemyInfo target;
 	
-	static HashMap<String, EnemyInfo> enemies=new HashMap<String, EnemyInfo>();
-	static EnemyInfo target;
-	static Point2D.Double nextLocation;
-	static Point2D.Double lastLocation;
-	static Point2D.Double myLocation;
-	static double myEnergy;
-	
+	// Next location to arrive
+	Point2D.Double nextLocation;
+	// Previous location
+	Point2D.Double lastLocation;
+	// Current location
+	Point2D.Double myLocation;
+	// Actual energy
+	double myEnergy;
+
+	// The offset of distance between current location and next location
+	// If distance of myLocation and nextLocation > of DISTANCE_NEXT_OFFSET choose new nextLocation
+	final double DISTANCE_NEXT_OFFSET = 15;
+	// Point generated each time choose nextLocation
+	final double POINT_GEN = 1000;
+	// Minimum distance between Peluria-Bot and target (percentage)
+	final double MIN_DISTANCE_TARGET = 0.5;
+	// Minimum distance between the next location to choose and current location
+	final double MIN_DISTANCE_MYLOCATION = 50;
+	// Maximum distance to myLocation and point generated
+	final double DISTANCE_MYLOCATION = 150;
+
+	// Battlefield
 	static Rectangle2D.Double battleField;
 	
+	// Peluria-Bot
 	PeluriaRobot pr;
-	
-	public MinimumRiskMovement(PeluriaRobot pr) {
-		this.pr=pr;
 
+	public MinimumRiskMovement(PeluriaRobot pr) {
+		this.pr = pr;
 	}
-	
-	public void init(){
+
+	public void init() {
 		myLocation = new Point2D.Double(pr.getX(), pr.getY());
 		target = new EnemyInfo();
 		nextLocation = myLocation;
 		lastLocation = myLocation;
-		battleField = new Rectangle2D.Double(18, 18, pr.getBattleFieldWidth() - 36, pr.getBattleFieldHeight() - 36);
-
+		// Set battlefield lower than real battlefield to avoid wall 
+		battleField = new Rectangle2D.Double(50, 50, pr.getBattleFieldWidth() - 100, pr.getBattleFieldHeight() - 100);
+		
+		// Set Peluria-Bot color
+		pr.setColors(Color.LIGHT_GRAY, Color.LIGHT_GRAY, Color.LIGHT_GRAY);
+		pr.setScanColor(Color.red);
 	}
-	
-	public void run(){
 
+
+	// Call in loop in Peluria-Bot run()
+	public void run() {
+
+		// Take energy and location
 		myLocation = new Point2D.Double(pr.getX(), pr.getY());
 		myEnergy = pr.getEnergy();
-		pr.turnRadarRightRadians(2*Math.PI);
-
 		
-		if(target.live && pr.getTime()>9) {
-			doMovementAndGun();
+		// Move radar
+		pr.setTurnRadarRightRadians(Double.POSITIVE_INFINITY  );
+		
+		// If target is live Move
+		if (target.live) {
+			doMovement();
 		}
 	}
 
-	private void doMovementAndGun() {
+	// Move Method
+	private void doMovement() {
 
-		double distanceToTarget = myLocation.distance(target.location);
+		// Distance to the next location
 		double distanceToNextDestination = myLocation.distance(nextLocation);
 
-		//search a new destination if I reached this one
-		if(distanceToNextDestination < 15) {
-			
-			// there should be better formulas then this one but it is basically here to increase OneOnOne performance. with more bots
-			// addLast will mostly be 1
-			double addLast = 1 - Math.rint(Math.pow(Math.random(), pr.getOthers()));
-			
-			Point2D.Double testPoint;
-			int i=0;
-			
-			do {
-				//	calculate the testPoint somewhere around the current position. 100 + 200*Math.random() proved to be good if there are
-				//	around 10 bots in a 1000x1000 field. but this needs to be limited this to distanceToTarget*0.8. this way the bot wont
-				//	run into the target (should mostly be the closest bot) 
-				testPoint = TriUtil.project(myLocation, 2*Math.PI*Math.random(), Math.min(distanceToTarget*0.8, 100 + 200*Math.random()));
-				if(battleField.contains(testPoint) && riskEvaluation (testPoint, addLast) < riskEvaluation (nextLocation, addLast)) {
-					nextLocation = testPoint;
-				}
-			} while(i++ < 200);
-			
+		// search a new destination if Peluria-Bot reached nextDestination
+		if (distanceToNextDestination < DISTANCE_NEXT_OFFSET) {
+
+			//Generate new destination
+			nextLocation = getNextPoint();
+
+			// Save last location
 			lastLocation = myLocation;
-			
+
 		} else {
+
+			// Go to the current destination
 			
-		// just the normal goTo stuff
+			// Calculate the angle to reach the destination
 			double angle = TriUtil.absoluteBearing(myLocation, nextLocation) - pr.getHeadingRadians();
-			double direction = 1;
 			
-			if(Math.cos(angle) < 0) {
+			// Calculate the direction
+			int direction = 1;
+			if (Math.cos(angle) < 0) {
 				angle += Math.PI;
 				direction = -1;
 			}
 			
+
+			// Go to the direction
 			pr.setAhead(distanceToNextDestination * direction);
-			pr.setTurnRightRadians(angle = Utils.normalRelativeAngle(angle));
-			// hitting walls isn't a good idea, but HawkOnFire still does it pretty often
-			pr.setMaxVelocity(Math.abs(angle) > 1 ? 0 : 8d);
+			angle = Utils.normalRelativeAngle(angle);
+			pr.setTurnRightRadians(angle );
 			
+			// Set the velocity based on the angle to turn
+			pr.setMaxVelocity(TriUtil.limit(0,(1 - (Math.abs(angle)  / Math.PI) ) * 8.0, 8.0));
+
 		}
-		
+
 	}
-	
-	
-	
-	public static double riskEvaluation (Point2D.Double point, double addLast) {
-		// this is basically here that the bot uses more space on the battlefield. In melee it is dangerous to stay somewhere too long.
-		double eval = addLast*0.08/point.distanceSq(lastLocation);
+
+	// Generate the point and choose the best
+	public Point2D.Double getNextPoint() {
+		// Point generated
+		Point2D.Double testPoint =null;
+		// Best point generated
+		Point2D.Double bestPoint = null;
+		// Distance to the current taget
+		double distanceToTarget = myLocation.distance(target.location);
 		
-		for (String key:enemies.keySet()) {
+		// Generation of points
+		for(int i=0;i<POINT_GEN;i++){
+			// Generate the point and verify if is the best
+			testPoint = generatePoint(distanceToTarget);
+			if (battleField.contains(testPoint) && (bestPoint == null || riskEvaluation(testPoint) < riskEvaluation(bestPoint))) {
+				bestPoint = testPoint;
+			}
+		} 
+
+		return bestPoint;
+	}
+
+
+	// Generate the point projecting the current location in :
+	// random angle between 0 and 2*Math.PI(360)
+	// random distance between MIN_DISTANCE_MYLOCATION and DISTANCE_MYLOCATION
+	// if the distance is > than the MIN_DISTANCE_TARGET % than take the last as distance
+	public Point2D.Double generatePoint(double distanceToTarget) {
+		return TriUtil.project(myLocation, 2 * Math.PI * Math.random(), Math.min(distanceToTarget * MIN_DISTANCE_TARGET, MIN_DISTANCE_MYLOCATION + DISTANCE_MYLOCATION * Math.random()));
+	}
+
+	//
+	public double riskEvaluation(Point2D.Double point) {
+
+		// Coulomb's law , The force of attraction is inversely proportional to
+		// the square of the distance
+		// The risk start to the inverse of distance with last location and the target location
+		// Last location because Peluria-Bot have to avaid to stay in the same place much time
+		double eval = 1 / point.distanceSq(lastLocation) + 1 / point.distanceSq(target.location);
+
+		
+		for (String key : enemies.keySet()) {
 			EnemyInfo en = enemies.get(key);
-			// this is the heart of HawkOnFire. So I try to explain what I wanted to do:
-			// -	Math.min(en.energy/myEnergy,2) is multiplied because en.energy/myEnergy is an indicator how dangerous an enemy is
-			// -	Math.abs(Math.cos(calcAngle(myPos, p) - calcAngle(en.pos, p))) is bigger if the moving direction isn't good in relation
-			//		to a certain bot. it would be more natural to use Math.abs(Math.cos(calcAngle(p, myPos) - calcAngle(en.pos, myPos)))
-			//		but this wasn't going to give me good results
-			// -	1 / p.distanceSq(en.pos) is just the normal anti gravity thing
-			if(en.live) {
-				eval += Math.min(en.energy/myEnergy,2) * 
-						(1 + Math.abs(Math.cos(TriUtil.absoluteBearing(point, myLocation) - TriUtil.absoluteBearing(point, en.location)))) / point.distanceSq(en.location);
+			// For each enemy:
+			// - Math.min(en.energy/myEnergy,2) is an indicator how dangerous is enemy
+			// - Math.abs(Math.cos(calcAngle(myPos, p) - calcAngle(en.pos, p)))
+			// is bigger if the moving direction is parallel to the enemy, Peluria-Bot tries move perpendicular
+			// - en.damage / p.distanceSq(en.pos) proportionally to the distance and the damage caused by the enemy
+			if (en.live) {
+				eval += Math.min(en.energy / myEnergy, 2) * (1 + Math.abs(Math.cos(TriUtil.absoluteBearing(point, myLocation) - TriUtil.absoluteBearing(point, en.location)))) *
+						en.damage / point.distanceSq(en.location);
 			}
 		}
 		return eval;
 	}
-	
-	public void onScannedRobot(ScannedRobotEvent e)
-	{
+
+	// When scanned robot
+	public void onScannedRobot(ScannedRobotEvent e) {
+
+		// Take or create EnemyInfo of the enemy
 		EnemyInfo en = enemies.get(e.getName());
-		
-		if(en == null){
+		if (en == null) {
 			en = new EnemyInfo();
 			enemies.put(e.getName(), en);
 		}
-		
+
+		// Update the information
 		en.energy = e.getEnergy();
 		en.live = true;
+		en.bearing = pr.getHeadingRadians() + e.getBearingRadians();
 		en.location = TriUtil.project(myLocation, pr.getHeadingRadians() + e.getBearingRadians(), e.getDistance());
-		
-		// normal target selection: the one closer to you is the most dangerous so attack him
-		if(!target.live || e.getDistance() < myLocation.distance(target.location)) {
+
+		//FIXME target change based of the targetting
+		if (!target.live || e.getDistance() < myLocation.distance(target.location)) {
 			target = en;
 		}
-		
-		// locks the radar if there is only one opponent left
-		if(pr.getOthers()==1)	pr.setTurnRadarLeftRadians(pr.getRadarTurnRemainingRadians());
+
+		// Change in one vs one mode movement
+		if (pr.getOthers() == 1)
+			pr.changeWaveMovement();
 	}
-	
-//- minor events ----------------------------------------------------------------------------------------------------------------------------
+
+	// When enemy dies
 	public void onRobotDeath(RobotDeathEvent e) {
-		enemies.get(e.getName()).live=false;
+		enemies.get(e.getName()).live = false;
 	}
-	
+
+	// When Peluria-Bot is hit by bullet
 	public void onHitByBullet(HitByBulletEvent event) {
+		enemies.get(event.getName()).damage=enemies.get(event.getName()).damage+0.1;
 	}
-	
+
 	public void onPaint(Graphics2D g) {
 		g.setColor(Color.GREEN);
 		g.drawRect((int)nextLocation.x, (int)nextLocation.y, 10, 10);
 		
+		g.setColor(Color.RED);
+		g.drawRect((int)target.location.x, (int)target.location.y, 10, 10);
 		
-		double addLast = 1 - Math.rint(Math.pow(Math.random(), pr.getOthers()));
 		
-		Point2D.Double testPoint;
-		int i=0;
-		double distanceToTarget = myLocation.distance(target.location);
-
 		ArrayList<Point2D.Double> points=new ArrayList<Point2D.Double>();
+				
+		Point2D.Double testPoint;
+		double max=0;
+		double distanceToTarget = myLocation.distance(target.location);
+		int i=0;
+		
 		do {
-			//	calculate the testPoint somewhere around the current position. 100 + 200*Math.random() proved to be good if there are
-			//	around 10 bots in a 1000x1000 field. but this needs to be limited this to distanceToTarget*0.8. this way the bot wont
-			//	run into the target (should mostly be the closest bot) 
-			testPoint = TriUtil.project(myLocation, 2*Math.PI*Math.random(), Math.min(distanceToTarget*0.8, 100 + 200*Math.random()));
-			if(battleField.contains(testPoint))
+			testPoint = generatePoint(distanceToTarget);
+			if(battleField.contains(testPoint) ) {
 				points.add(testPoint);
-		} while(i++ < 200);
+				if(riskEvaluation(testPoint)>max)
+					max=riskEvaluation(testPoint);
+			}
+		} while(i++ < POINT_GEN);
+		
 		
 		for(Point2D.Double p : points){
-			g.setColor(new Color(0,100,255));
-			g.drawRect((int)p.x, (int)p.y, 10, 10);
+			int colorRisk=(int)(riskEvaluation(p)/max * 255);
+			g.setColor(new Color(colorRisk,0,255-colorRisk));
+			g.fillRect((int)p.x, (int)p.y, 5, 5);
 		}
 	}
-
+	
+	public void setTarget(Point2D.Double targetLocation){
+		this.target.location=targetLocation;
+	}
+	
+	
 }
 
 class EnemyInfo {
 	public Point2D.Double location;
 	public double energy;
 	public boolean live;
+	public double bearing;
+	public double damage;
 }
