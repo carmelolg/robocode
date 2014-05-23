@@ -4,6 +4,8 @@ import java.awt.Graphics2D;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.omg.CORBA.MARSHAL;
+
 import robocode.HitByBulletEvent;
 import robocode.RobotDeathEvent;
 import robocode.ScannedRobotEvent;
@@ -19,7 +21,7 @@ class Enemy {
 	boolean isSentryRobot;
 
 	// 1 not very dangerous 2 normal 3 dangerous
-	int priority = 2;
+	boolean priority = false;
 
 	// This is a constructor
 	Enemy(String name, double currentEnergy, double distance, double bearing,
@@ -71,7 +73,7 @@ public class MeleeTargeting {
 		this.mrm = mrm;
 
 	}
-	
+
 	/** onScannedRobot PART **/
 
 	// This function at the first scanned all robot of the battle. Know that we
@@ -90,9 +92,6 @@ public class MeleeTargeting {
 					event.isSentryRobot());
 			mapOfEnemy.put(enemy.name, enemy);
 			mapOfGuessFactor.put(enemy.name, new GuessFactorTargeting(pr));
-			// I don't want that the target is at the start "null". So ONLY at
-			// the start is the last one scanned
-			target = mapOfEnemy.values().iterator().next();
 		} else {
 			// Sometimes occurs that one enemy is not scanned. In this case
 			// check if there are already in the maps.
@@ -108,16 +107,8 @@ public class MeleeTargeting {
 			}
 			// This function update the values of current scanned enemy.
 			update(event);
-			// In this part of function I check if there are some Enemy more
-			// dangerous than each others.
-			boolean exists = existsTheDangerousEnemy();
-			// If my target is not near me, must to change the target
-			if (isntNearMyEnemy(event)) {
-				exists = false;
-				removePriorityTarget();
-			}
-			// Choose the target
-			getTheClosestEnemy(event, exists);
+
+			target = getTarget();
 
 			/** SOME STAMPS FOR DEBUGGING **/
 			for (Enemy e : mapOfEnemy.values()) {
@@ -138,6 +129,37 @@ public class MeleeTargeting {
 
 	}
 
+	private Enemy getTarget() {
+		if (mapOfEnemy.size() == 1) {
+			return mapOfEnemy.values().iterator().next();
+		}
+		Enemy enemyToReturn = getTheClosestEnemyThatFireMe();
+		if (enemyToReturn == null) {
+			if (getLowEnemy() != null) {
+				enemyToReturn = getLowEnemy();
+			} else
+				enemyToReturn = getTheClosestEnemy();
+		}
+		return enemyToReturn;
+	}
+
+	private Enemy getLowEnemy() {
+		Enemy enemyToReturn = null;
+		for (Enemy e : mapOfEnemy.values()) {
+			if (e.currentEnergy < dangerousThreshold) {
+				if (enemyToReturn != null) {
+					if (enemyToReturn.distance > e.distance) {
+						enemyToReturn = e;
+					}
+				} else {
+					enemyToReturn = e;
+				}
+			}
+
+		}
+		return enemyToReturn;
+	}
+
 	private void update(ScannedRobotEvent event) {
 		for (Enemy e : mapOfEnemy.values()) {
 			if (event.getName() == e.name) {
@@ -146,75 +168,39 @@ public class MeleeTargeting {
 				e.currentEnergy = event.getEnergy();
 				e.velocity = event.getVelocity();
 				e.distance = event.getDistance();
+			}
+		}
 
-				// If my enemy have not more energy (energyThreshold based) I
-				// would like to kill him.
-				/**
-				 * if (event.getEnergy() <= dangerousThreshold) {
-				 * removePriorityTarget(); e.priority = 3; // not very dangerous
-				 * }
-				 **/
+	}
 
-				// If is not very interesting the presence of an enemy
-				// with low energy I ignore him.
-				if (event.getEnergy() <= dangerousThreshold) {
-					removePriorityTarget(); e.priority = 3; // not very dangerous
+	private Enemy getTheClosestEnemyThatFireMe() {
+		Enemy enemyToReturn = null;
+		for (Enemy e : mapOfEnemy.values()) {
+			if (e.priority == true) {
+				if (enemyToReturn != null) {
+					if (enemyToReturn.distance > e.distance) {
+						enemyToReturn = e;
+					}
+				} else {
+					enemyToReturn = e;
 				}
 			}
 		}
-
+		return enemyToReturn;
 	}
 
-	private boolean existsTheDangerousEnemy() {
+	private Enemy getTheClosestEnemy() {
+		Enemy enemyToReturn = target;
+		double max_value = Integer.MIN_VALUE;
 		for (Enemy e : mapOfEnemy.values()) {
-			if (e.priority == 3) {
-				return true;
-			}
-		}
-		return false;
-	}
+			double coefficent_target = 1 / (e.distance * e.currentEnergy);
+			if (max_value < coefficent_target) {
+				max_value = coefficent_target;
+				enemyToReturn = e;
 
-	private boolean isntNearMyEnemy(ScannedRobotEvent event) {
-		for (Enemy e : mapOfEnemy.values()) {
-			if (e.name != target.name) {
-				// da verificare, aumentare la distanceTreshold solo per questo
-				// if
-				if (target.distance >= e.distance + distanceThreshold)
-					return true;
 			}
 		}
-		return false;
-	}
-
-	// Only if the enemy have priority greater than 1 I set the priority to 2 at
-	// all of the enemies
-	private void removePriorityTarget() {
-		for (Enemy en : mapOfEnemy.values()) {
-			if (en.priority > 1)
-				if (en.name == target.name)
-					en.priority = 2;
-		}
-	}
-
-	private void getTheClosestEnemy(ScannedRobotEvent event, boolean exists) {
-		if (exists) {
-			for (Enemy e : mapOfEnemy.values()) {
-				// If the current event have priority 3 and not is more distant
-				// from Peluria Robot thus THIS IS THE CURRENT TARGET.
-				if (e.name == event.getName()
-						&& e.priority == 3
-						&& !(event.getDistance() >= target.distance
-								+ distanceThreshold)) {
-					target = e;
-				}
-			}
-		} // ELSE not exists the dangerous robot (who fired me).
-		else {
-			for (Enemy e : mapOfEnemy.values()) {
-				if (e.distance < target.distance && e.priority > 1)
-					target = e;
-			}
-		}
+		return enemyToReturn;
 	}
 
 	/** END onScannedRobot part **/
@@ -228,32 +214,15 @@ public class MeleeTargeting {
 	}
 
 	private void getTheCurrentEnemy(String name) {
-		removePriorityTarget();
-		for (Enemy e : mapOfEnemy.values()) {
-			if (name == e.name) {
+		mapOfEnemy.get(name).priority = true;
 
-				if (e.distance <= target.distance + distanceThreshold) {
-					e.priority = 3;
-					target = e;
-				} else {
-					for (Enemy en : mapOfEnemy.values()) {
-						if (en.name == target.name)
-							en.priority = 3;
-					}
-				}
-			}
-
-		}
 	}
 
 	/** END onHitBullet part **/
 
 	public void onRobotDeath(RobotDeathEvent e) {
 		mapOfEnemy.remove(e.getName());
-		if (e.getName() == target.name)
-			if (mapOfEnemy.values().size() > 0)
-			target = mapOfEnemy.values().iterator().next();
-		
+		target = getTarget();
 	}
 
 	public void onPaint(Graphics2D g) {
