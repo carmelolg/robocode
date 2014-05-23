@@ -1,5 +1,6 @@
 package peluria_robot;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 
 import robocode.AdvancedRobot;
@@ -13,9 +14,9 @@ import robocode.ScannedRobotEvent;
 public class PeluriaRobot extends AdvancedRobot {
 
 	GuessFactorTargeting gft = new GuessFactorTargeting(this);
-	MinimumRiskMovement wsm = new MinimumRiskMovement(this);
-//	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
-	MeleeTargeting mt = new MeleeTargeting(this, gft);
+//	MinimumRiskMovement wsm = new MinimumRiskMovement(this);
+	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
+//	MeleeTargeting mt = new MeleeTargeting(this, wsm);
 
 	public void run() {
 		wsm.init();
@@ -23,7 +24,9 @@ public class PeluriaRobot extends AdvancedRobot {
 		setAdjustGunForRobotTurn(true);
 		setAdjustRadarForGunTurn(true);
 		setAdjustRadarForRobotTurn(true);
-
+		setColors(Color.RED, Color.WHITE, Color.LIGHT_GRAY);
+		setBulletColor(Color.RED);
+		setRadarColor(Color.LIGHT_GRAY);
 		turnRadarRightRadians(2*Math.PI);
 		
 		for(;;){
@@ -35,25 +38,25 @@ public class PeluriaRobot extends AdvancedRobot {
 	@Override
 	public void onScannedRobot(ScannedRobotEvent event) {
 		wsm.onScannedRobot(event);
-		mt.onScannedRobot(event);
+		gft.onScannedRobot(event);
 	}
 
 	@Override
 	public void onHitByBullet(HitByBulletEvent event) {
 		wsm.onHitByBullet(event);
-		mt.onHitByBullet(event);
+//		gft.onHitByBullet(event);
 	}
 	
 	@Override
 	public void onRobotDeath(RobotDeathEvent e) {
 		wsm.onRobotDeath(e);
-		mt.onRobotDeath(e);
+//		gft.onRobotDeath(e);
 	}
 
 	
 	@Override
 	public void onPaint(Graphics2D g) {
 		wsm.onPaint(g);
-		mt.onPaint(g);
+		gft.onPaint(g);
 	}
 }
