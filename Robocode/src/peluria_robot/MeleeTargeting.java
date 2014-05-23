@@ -251,6 +251,7 @@ public class MeleeTargeting {
 	public void onRobotDeath(RobotDeathEvent e) {
 		mapOfEnemy.remove(e.getName());
 		if (e.getName() == target.name)
+			if (mapOfEnemy.values().size() > 0)
 			target = mapOfEnemy.values().iterator().next();
 		
 	}
