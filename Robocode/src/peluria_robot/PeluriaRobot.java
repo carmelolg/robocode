@@ -13,7 +13,6 @@ import robocode.ScannedRobotEvent;
  */
 public class PeluriaRobot extends AdvancedRobot {
 
-	GuessFactorTargeting gft = new GuessFactorTargeting(this);
 	BotMovement movement = new MinimumRiskMovement(this);
 //	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
 	MeleeTargeting mt = new MeleeTargeting(this, movement);

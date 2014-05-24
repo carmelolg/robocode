@@ -1,6 +1,8 @@
 package peluria_robot;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.geom.Point2D;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +24,8 @@ class Enemy {
 
 	// 1 not very dangerous 2 normal 3 dangerous
 	boolean priority = false;
+	long timeFired;
+	
 
 	// This is a constructor
 	Enemy(String name, double currentEnergy, double distance, double bearing,
@@ -46,6 +50,7 @@ class Enemy {
 public class MeleeTargeting {
 
 	PeluriaRobot pr;
+
 	// This is the map that contains the current enemies of the battle
 	Map<String, Enemy> mapOfEnemy;
 	// This is the map that contains the current enemies's Guess Factor for the
@@ -64,6 +69,8 @@ public class MeleeTargeting {
 	// to (must to decide)ignore/kill the enemy that have the energy less than
 	// this threshold
 	double dangerousThreshold = 20;
+	
+	double timeFiredThreshold = 50;
 
 	public MeleeTargeting(PeluriaRobot pr, BotMovement mrm) {
 		this.pr = pr;
@@ -71,7 +78,6 @@ public class MeleeTargeting {
 		mapOfGuessFactor = new HashMap<String, GuessFactorTargeting>();
 		target = new Enemy();
 		this.mrm = mrm;
-
 	}
 
 	/** onScannedRobot PART **/
@@ -140,6 +146,8 @@ public class MeleeTargeting {
 			} else
 				enemyToReturn = getTheClosestEnemy();
 		}
+		System.out.println(enemyToReturn.name);
+		mrm.setTarget(enemyToReturn.name);
 		return enemyToReturn;
 	}
 
@@ -163,12 +171,16 @@ public class MeleeTargeting {
 	private void update(ScannedRobotEvent event) {
 		for (Enemy e : mapOfEnemy.values()) {
 			if (event.getName() == e.name) {
-				e.bearing = event.getBearing();
+				e.bearing = event.getBearing() + pr.getHeadingRadians();
 				e.heading = event.getHeading();
 				e.currentEnergy = event.getEnergy();
 				e.velocity = event.getVelocity();
 				e.distance = event.getDistance();
 			}
+			
+			if(pr.getTime() - e.timeFired > timeFiredThreshold)
+				e.priority=false;
+			
 		}
 
 	}
@@ -215,7 +227,7 @@ public class MeleeTargeting {
 
 	private void getTheCurrentEnemy(String name) {
 		mapOfEnemy.get(name).priority = true;
-
+		mapOfEnemy.get(name).timeFired=pr.getTime();
 	}
 
 	/** END onHitBullet part **/
@@ -226,6 +238,8 @@ public class MeleeTargeting {
 	}
 
 	public void onPaint(Graphics2D g) {
+		
+		
 		for (String name : mapOfGuessFactor.keySet()) {
 			if (name == target.name) {
 				mapOfGuessFactor.get(name).onPaint(g);

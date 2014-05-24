@@ -390,4 +390,8 @@ public class WaveSurfingMovement implements BotMovement{
 	public void onRobotDeath(RobotDeathEvent e) {
 	}
 
+	@Override
+	public void setTarget(String name) {		
+	}
+
 }

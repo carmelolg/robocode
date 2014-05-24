@@ -34,13 +34,13 @@ public class MinimumRiskMovement implements BotMovement {
 	// If distance of myLocation and nextLocation > of DISTANCE_NEXT_OFFSET choose new nextLocation
 	final double DISTANCE_NEXT_OFFSET = 15;
 	// Point generated each time choose nextLocation
-	final double POINT_GEN = 1000;
+	final double POINT_GEN = 200;
 	// Minimum distance between Peluria-Bot and target (percentage)
 	final double MIN_DISTANCE_TARGET = 0.5;
 	// Minimum distance between the next location to choose and current location
-	final double MIN_DISTANCE_MYLOCATION = 50;
+	final double MIN_DISTANCE_MYLOCATION = 25;
 	// Maximum distance to myLocation and point generated
-	final double DISTANCE_MYLOCATION = 150;
+	final double DISTANCE_MYLOCATION = 50;
 
 	// Battlefield
 	static Rectangle2D.Double battleField;
@@ -54,7 +54,7 @@ public class MinimumRiskMovement implements BotMovement {
 
 	public void init() {
 		myLocation = new Point2D.Double(pr.getX(), pr.getY());
-		target = new EnemyInfo();
+		target = null;
 		nextLocation = myLocation;
 		lastLocation = myLocation;
 		// Set battlefield lower than real battlefield to avoid wall 
@@ -77,7 +77,7 @@ public class MinimumRiskMovement implements BotMovement {
 		pr.setTurnRadarRightRadians(Double.POSITIVE_INFINITY  );
 		
 		// If target is live Move
-		if (target.live) {
+		if (target!=null) {
 			doMovement();
 		}
 	}
@@ -156,12 +156,14 @@ public class MinimumRiskMovement implements BotMovement {
 
 	//
 	public double riskEvaluation(Point2D.Double point) {
+		
+		Point2D.Double battlefieldCenter=new Point2D.Double(pr.getBattleFieldWidth()/2,pr.getBattleFieldHeight()/2);
 
 		// Coulomb's law , The force of attraction is inversely proportional to
 		// the square of the distance
 		// The risk start to the inverse of distance with last location and the target location
 		// Last location because Peluria-Bot have to avaid to stay in the same place much time
-		double eval = 1 / point.distanceSq(lastLocation) + 1 / point.distanceSq(target.location);
+		double eval = 1 / point.distanceSq(lastLocation) + 1 /point.distanceSq(battlefieldCenter);
 
 		
 		for (String key : enemies.keySet()) {
@@ -173,7 +175,7 @@ public class MinimumRiskMovement implements BotMovement {
 			// - en.damage / p.distanceSq(en.pos) proportionally to the distance and the damage caused by the enemy
 			if (en.live) {
 				eval += Math.min(en.energy / myEnergy, 2) * (1 + Math.abs(Math.cos(TriUtil.absoluteBearing(point, myLocation) - TriUtil.absoluteBearing(point, en.location)))) *
-						en.damage / point.distanceSq(en.location);
+						1 / point.distanceSq(en.location);
 			}
 		}
 		return eval;
@@ -195,10 +197,8 @@ public class MinimumRiskMovement implements BotMovement {
 		en.bearing = pr.getHeadingRadians() + e.getBearingRadians();
 		en.location = TriUtil.project(myLocation, pr.getHeadingRadians() + e.getBearingRadians(), e.getDistance());
 
-		//FIXME target change based of the targetting
-		if (!target.live || e.getDistance() < myLocation.distance(target.location)) {
-			target = en;
-		}
+		if(target==null)
+			target=en;
 
 		// Change in one vs one mode movement
 		if (pr.getOthers() == 1)
@@ -216,12 +216,18 @@ public class MinimumRiskMovement implements BotMovement {
 	}
 
 	public void onPaint(Graphics2D g) {
+		if(target==null)return;
+		
+		g.setColor(Color.GREEN);
+		Point2D.Double battlefieldCenter=new Point2D.Double(pr.getBattleFieldWidth()/2,pr.getBattleFieldHeight()/2);
+		g.drawRect((int)battlefieldCenter.x, (int)battlefieldCenter.y, 10, 10);
+		
+		
 		g.setColor(Color.GREEN);
 		g.drawRect((int)nextLocation.x, (int)nextLocation.y, 10, 10);
 		
 		g.setColor(Color.RED);
-		g.drawRect((int)target.location.x, (int)target.location.y, 10, 10);
-		
+		g.drawRect((int)target.location.x, (int)target.location.y, 20, 20);
 		
 		ArrayList<Point2D.Double> points=new ArrayList<Point2D.Double>();
 				
@@ -247,14 +253,16 @@ public class MinimumRiskMovement implements BotMovement {
 		}
 	}
 	
-	public void setTarget(Point2D.Double targetLocation){
-		this.target.location=targetLocation;
+	public void setTarget(String name){
+		if(enemies.get(name)!=null)
+			this.target.location=enemies.get(name).location;
 	}
 	
 	
 }
 
 class EnemyInfo {
+
 	public Point2D.Double location;
 	public double energy;
 	public boolean live;
