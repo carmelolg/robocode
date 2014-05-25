@@ -1,12 +1,8 @@
 package peluria_robot;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.geom.Point2D;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.omg.CORBA.MARSHAL;
 
 import robocode.HitByBulletEvent;
 import robocode.RobotDeathEvent;
@@ -62,15 +58,13 @@ public class MeleeTargeting {
 	BotMovement mrm;
 
 	// Here, we have two threshold.
-	// The second one is relative at the distance between Peluria Robot and
-	// target. We use this for perform the current interesting enemy(target)
-	double distanceThreshold = 150;
+	double distanceThreshold = 3;
 	// This one is relative at the potentially dangerous robot, because we want
 	// to (must to decide)ignore/kill the enemy that have the energy less than
 	// this threshold
 	double dangerousThreshold = 20;
 	
-	double timeFiredThreshold = 50;
+	double timeFiredThreshold = 150;
 
 	public MeleeTargeting(PeluriaRobot pr, BotMovement mrm) {
 		this.pr = pr;
@@ -93,8 +87,8 @@ public class MeleeTargeting {
 		if (event.getTime() < 8.0) {
 			Enemy enemy = null;
 			enemy = new Enemy(event.getName(), event.getEnergy(),
-					event.getDistance(), event.getBearing(),
-					event.getHeading(), event.getVelocity(),
+					event.getDistance(), event.getBearingRadians(),
+					event.getHeadingRadians(), event.getVelocity(),
 					event.isSentryRobot());
 			mapOfEnemy.put(enemy.name, enemy);
 			mapOfGuessFactor.put(enemy.name, new GuessFactorTargeting(pr));
@@ -105,8 +99,8 @@ public class MeleeTargeting {
 			if (!mapOfEnemy.containsKey(event.getName())) {
 				Enemy enemy = null;
 				enemy = new Enemy(event.getName(), event.getEnergy(),
-						event.getDistance(), event.getBearing(),
-						event.getHeading(), event.getVelocity(),
+						event.getDistance(), event.getBearingRadians(),
+						event.getHeadingRadians(), event.getVelocity(),
 						event.isSentryRobot());
 				mapOfEnemy.put(enemy.name, enemy);
 				mapOfGuessFactor.put(enemy.name, new GuessFactorTargeting(pr));
@@ -171,8 +165,8 @@ public class MeleeTargeting {
 	private void update(ScannedRobotEvent event) {
 		for (Enemy e : mapOfEnemy.values()) {
 			if (event.getName() == e.name) {
-				e.bearing = event.getBearing() + pr.getHeadingRadians();
-				e.heading = event.getHeading();
+				e.bearing = event.getBearingRadians();
+				e.heading = event.getHeadingRadians();
 				e.currentEnergy = event.getEnergy();
 				e.velocity = event.getVelocity();
 				e.distance = event.getDistance();
@@ -185,12 +179,18 @@ public class MeleeTargeting {
 
 	}
 
+	private double getCoefficentTarget(Enemy e){
+		return distanceThreshold / e.distance + 1 / e.currentEnergy;
+	}
+	
 	private Enemy getTheClosestEnemyThatFireMe() {
 		Enemy enemyToReturn = null;
 		for (Enemy e : mapOfEnemy.values()) {
 			if (e.priority == true) {
 				if (enemyToReturn != null) {
-					if (enemyToReturn.distance > e.distance) {
+					double coefficent_e = getCoefficentTarget(e);
+					double coefficent_enemyToReturn = getCoefficentTarget(enemyToReturn);
+					if (coefficent_enemyToReturn < coefficent_e) {
 						enemyToReturn = e;
 					}
 				} else {
@@ -205,7 +205,7 @@ public class MeleeTargeting {
 		Enemy enemyToReturn = target;
 		double max_value = Integer.MIN_VALUE;
 		for (Enemy e : mapOfEnemy.values()) {
-			double coefficent_target = 1 / (e.distance * e.currentEnergy);
+			double coefficent_target = getCoefficentTarget(e);
 			if (max_value < coefficent_target) {
 				max_value = coefficent_target;
 				enemyToReturn = e;
@@ -226,8 +226,10 @@ public class MeleeTargeting {
 	}
 
 	private void getTheCurrentEnemy(String name) {
-		mapOfEnemy.get(name).priority = true;
-		mapOfEnemy.get(name).timeFired=pr.getTime();
+		if(mapOfEnemy.get(name) != null){
+			mapOfEnemy.get(name).priority = true;
+			mapOfEnemy.get(name).timeFired=pr.getTime();
+		}
 	}
 
 	/** END onHitBullet part **/

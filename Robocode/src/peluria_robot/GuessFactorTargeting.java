@@ -4,10 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.TreeMap;
 
 import robocode.ScannedRobotEvent;
 import robocode.util.Utils;
@@ -176,7 +173,7 @@ public class GuessFactorTargeting {
 	// Return segmented stats
 	private int[] getSegmentatedStats(double distance, double velocity) {
 		int indexDistance = (int) (distance / getMaxDIstance() * (SEG_DISTANCE_SIZE - 1));
-		int indexVelocity = (int) (Math.abs(velocity) / 8.0 * (SEG_DISTANCE_SIZE - 1));
+		int indexVelocity = (int) (Math.abs(velocity) / 8.0 * (SEG_VELOCITY_SIZE - 1));
 
 		return stats[indexDistance][indexVelocity];
 	}
