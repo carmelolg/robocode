@@ -76,9 +76,12 @@ public class GuessFactorTargeting {
 	List<WaveBullet> waves = new ArrayList<WaveBullet>();
 	// Peluria-Bot
 	PeluriaRobot pr;
+	
+	// Degree remaining to turn the cannon
+	final static int TURN_REMAINING=10;
 
 	// The vector of stats of the bullet fired
-	final static int STATS_SIZE = 31;
+	final static int STATS_SIZE = 105;
 	final static int SEG_DISTANCE_SIZE = 5;
 	final static int SEG_VELOCITY_SIZE = 5;
 	static int[][][] stats = new int[SEG_VELOCITY_SIZE][SEG_DISTANCE_SIZE][STATS_SIZE];
@@ -165,15 +168,15 @@ public class GuessFactorTargeting {
 
 		// If Peluria-Bot cannon is cold and gun doesn't have to turn anymore or
 		// by just a very small amount.
-		if (pr.getGunHeat() == 0 && gunAdjust < Math.atan2(9, e.getDistance())
+		if (pr.getGunHeat() == 0 &&  Math.abs(pr.getGunTurnRemaining()) < TURN_REMAINING
 				&& pr.setFireBullet(power) != null)
 			waves.add(newWave);
 	}
 
 	// Return segmented stats
 	private int[] getSegmentatedStats(double distance, double velocity) {
-		int indexDistance = (int) (distance / getMaxDIstance() * (SEG_DISTANCE_SIZE - 1));
-		int indexVelocity = (int) (Math.abs(velocity) / 8.0 * (SEG_VELOCITY_SIZE - 1));
+		int indexDistance = (int) Math.round((distance / getMaxDIstance() * (SEG_DISTANCE_SIZE - 1)));
+		int indexVelocity = (int) Math.round((Math.abs(velocity) / 8.0 * (SEG_VELOCITY_SIZE - 1)));
 
 		return stats[indexDistance][indexVelocity];
 	}
