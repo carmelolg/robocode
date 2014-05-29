@@ -15,9 +15,9 @@ public class PeluriaRobot extends AdvancedRobot {
 
 	BotMovement movement = new MinimumRiskMovement(this);
 //	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
-//	MeleeTargeting mt = new MeleeTargeting(this, movement);
+	MeleeTargeting mt = new MeleeTargeting(this, movement);
 	
-	PatternMatching mt=new PatternMatching(this);
+//	PatternMatching mt=new PatternMatching(this);
 
 	public void run() {
 		movement.init();

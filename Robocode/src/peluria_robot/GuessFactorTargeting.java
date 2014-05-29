@@ -76,6 +76,7 @@ public class GuessFactorTargeting {
 	List<WaveBullet> waves = new ArrayList<WaveBullet>();
 	// Peluria-Bot
 	PeluriaRobot pr;
+	PatternMatching pm;
 	
 	// Degree remaining to turn the cannon
 	final static int TURN_REMAINING=10;
@@ -98,10 +99,21 @@ public class GuessFactorTargeting {
 
 	public GuessFactorTargeting(PeluriaRobot pr) {
 		this.pr = pr;
+		pm = new PatternMatching(pr);
 	}
 
 	public void onScannedRobot(ScannedRobotEvent e) {
 
+		// Perform the power of bullet
+		double power = getBulletPower(e.getDistance());
+		
+		if(pm.noGuessFactorIJustFire(e, power)){
+			System.out.println(pm.logEnemy.size());
+			System.out.println("Pattern Matching rulez");
+			return;
+		}
+
+		System.out.println("Guess Factor rulez");
 		// Bearing betwen Peluria-Bot and enemy
 		double absBearing = pr.getHeadingRadians() + e.getBearingRadians();
 
@@ -124,8 +136,6 @@ public class GuessFactorTargeting {
 			}
 		}
 
-		// Perform the power of bullet
-		double power = getBulletPower(e.getDistance());
 
 		// Perform the direction of enemy , if enemy don't move take the
 		// previous direction
@@ -192,10 +202,10 @@ public class GuessFactorTargeting {
 		if (pr.getEnergy() < energyThreshold)
 			maxPower = 0.2;
 
-		return (1 - (distance / Math
+		return TriUtil.limit(1.0, (1 - (distance / Math
 				.sqrt(Math.pow(pr.getBattleFieldHeight(), 2)
 						+ Math.pow(pr.getBattleFieldWidth(), 2))))
-				* maxPower;
+				* maxPower, 3);
 	}
 
 	double getMaxDIstance() {

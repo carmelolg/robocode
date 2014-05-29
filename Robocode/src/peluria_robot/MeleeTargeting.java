@@ -111,10 +111,10 @@ public class MeleeTargeting {
 			target = getTarget();
 
 			/** SOME STAMPS FOR DEBUGGING **/
-			for (Enemy e : mapOfEnemy.values()) {
-				System.out.println(e.name + " PRIORITY: " + e.priority);
-			}
-			System.out.println("TARGET: " + target.name);
+//			for (Enemy e : mapOfEnemy.values()) {
+//				System.out.println(e.name + " PRIORITY: " + e.priority);
+//			}
+//			System.out.println("TARGET: " + target.name);
 			/** END **/
 
 			// When I know who's the target, I fire him.
@@ -140,7 +140,7 @@ public class MeleeTargeting {
 			} else
 				enemyToReturn = getTheClosestEnemy();
 		}
-		System.out.println(enemyToReturn.name);
+//		System.out.println(enemyToReturn.name);
 		mrm.setTarget(enemyToReturn.name);
 		return enemyToReturn;
 	}

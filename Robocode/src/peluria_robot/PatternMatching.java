@@ -11,17 +11,17 @@ import robocode.RobotDeathEvent;
 import robocode.ScannedRobotEvent;
 import robocode.util.Utils;
 
-class EnemyMovement{
+class EnemyMovement {
 	double velocity;
 	double heading;
 	Point2D.Double location;
-	
+
 	double dVelocity;
 	double dHeading;
 	double dDistance;
 
-	
-	public EnemyMovement(double velocity, double heading, Double location, double dVelocity, double dHeading, double dDistance) {
+	public EnemyMovement(double velocity, double heading, Double location,
+			double dVelocity, double dHeading, double dDistance) {
 		super();
 		this.velocity = velocity;
 		this.heading = heading;
@@ -31,181 +31,175 @@ class EnemyMovement{
 		this.dDistance = dDistance;
 	}
 
-
-	double compare(EnemyMovement mov){
-		double maxVelocity=8.0;
+	double compare(EnemyMovement mov) {
+		double maxVelocity = 8.0;
 		double maxHeading = (10 - 0.75 * Math.abs(velocity));
 		double maxDistance = velocity * PatternMatching.TICK_SCAN;
-		
-		
-		double distanceVelocity=Math.pow(Math.abs(dVelocity/maxVelocity) - Math.abs(mov.dVelocity/maxVelocity), 2);
-		double distanceHeading=Math.pow(dHeading/maxHeading - mov.dHeading/maxHeading, 2);
-		double distanceDistance =Math.pow(dDistance/maxDistance - mov.dDistance/maxDistance, 2);
-		
-		System.out.println(distanceVelocity+" "+distanceHeading+" "+distanceDistance);
-		
-		return Math.sqrt(distanceVelocity+ distanceHeading + distanceDistance );
-		
+
+		double distanceVelocity = Math.pow(Math.abs(dVelocity / maxVelocity)
+				- Math.abs(mov.dVelocity / maxVelocity), 2);
+		double distanceHeading = Math.pow(dHeading / maxHeading - mov.dHeading
+				/ maxHeading, 2);
+		double distanceDistance = Math.pow(dDistance / maxDistance
+				- mov.dDistance / maxDistance, 2);
+
+
+		return Math.sqrt(distanceVelocity + distanceHeading + distanceDistance);
+
 	}
-	
-	
-	
-	
+
 }
 
-
 public class PatternMatching {
-	
-	static ArrayList<EnemyMovement> logEnemy=new ArrayList<EnemyMovement>();
+
+	static ArrayList<EnemyMovement> logEnemy = new ArrayList<EnemyMovement>();
 	PeluriaRobot pr;
-	
+
 	public PatternMatching(PeluriaRobot pr) {
-		this.pr=pr;
+		this.pr = pr;
 	}
-	
-	
+
 	final static int TICK_SCAN = 5;
-		
+	static final double FIRING_THRESHOLD = 0.01;
+
 	final int LAST_MOVEMENT_SIZE = 5;
-	
+
 	Point2D.Double enemyLocation;
 	Point2D.Double enemyFutureLocation;
-	
-	public void onScannedRobot(ScannedRobotEvent e) {
-		
+
+	public boolean noGuessFactorIJustFire(ScannedRobotEvent e, double the_power) {
+
+		if(pr.getOthers() > 1)
+			return false;
 		// Bearing betwen Peluria-Bot and enemy
 		double absBearing = pr.getHeadingRadians() + e.getBearingRadians();
 		// Enemy Location
-		enemyLocation = TriUtil
-				.project(new Point2D.Double(pr.getX(),pr.getY()), absBearing, e.getDistance());
+		enemyLocation = TriUtil.project(
+				new Point2D.Double(pr.getX(), pr.getY()), absBearing,
+				e.getDistance());
+
+		addLogMovement(e, enemyLocation);
+
+		int bestPattern = 0;
+		double bestEvaluation = Integer.MAX_VALUE;
+		if (logEnemy.size() - 2 * LAST_MOVEMENT_SIZE + 1 <= 0)
+			return false;
 		
-		
-		if(e.getTime() % TICK_SCAN == 0)
-			addLogMovement(e,enemyLocation);
-		
-		
-		int bestPattern=0;
-		double bestEvaluation=Integer.MAX_VALUE;
-		if(logEnemy.size()-2*LAST_MOVEMENT_SIZE+1<=0)return;
-		for(int i=0;i<logEnemy.size()-2*LAST_MOVEMENT_SIZE+1;i++){
-			double evaluationPattern=evaluate(i);
-			
-			if(evaluationPattern < bestEvaluation){
+		for (int i = 0; i < logEnemy.size() - 2 * LAST_MOVEMENT_SIZE + 1; i++) {
+			double evaluationPattern = evaluate(i);
+
+			if (evaluationPattern < bestEvaluation) {
 				bestEvaluation = evaluationPattern;
-				bestPattern = i ;
+				bestPattern = i;
 			}
-			
+
 		}
-		System.out.println("BEEEEEEEEEST "+bestEvaluation);
+
+		if(bestEvaluation > FIRING_THRESHOLD)
+			return false;
 		
 		bestPattern += LAST_MOVEMENT_SIZE;
-		double power = 2;
-		double powerVel = 20 -3*power;
-		
+		double power = the_power;
+		double powerVel = 20 - 3 * power;
+
 		double timeImpact = e.getDistance() / powerVel;
-		
-		int indexFutureMovement = (int)( timeImpact / TICK_SCAN);
-		
-		if(bestPattern+indexFutureMovement > logEnemy.size()) return;
-		
-		double angleFuture=0;
-		double futureDistance=0;
-		for(int i=bestPattern;i<bestPattern+indexFutureMovement;i++){
-			angleFuture+=logEnemy.get(i).dHeading;
-			futureDistance+=logEnemy.get(i).dDistance;
+
+		int indexFutureMovement = (int) (timeImpact / TICK_SCAN);
+
+		if (bestPattern + indexFutureMovement > logEnemy.size())
+			return false;
+
+		double angleFuture = 0;
+		double futureDistance = 0;
+		for (int i = bestPattern; i < bestPattern + indexFutureMovement; i++) {
+			angleFuture += logEnemy.get(i).dHeading;
+			futureDistance += logEnemy.get(i).dDistance;
 		}
-		
 
+		enemyFutureLocation = TriUtil.project(enemyLocation, angleFuture,
+				futureDistance);
+		double absFutureBearing = TriUtil.absoluteBearing(pr.getX(), pr.getY(),
+				enemyFutureLocation.x, enemyFutureLocation.y);
 
-
-		
-		enemyFutureLocation=TriUtil.project(enemyLocation, angleFuture, futureDistance);
-		double absFutureBearing =TriUtil.absoluteBearing(pr.getX(), pr.getY(), enemyFutureLocation.x, enemyFutureLocation.y);
-
-		
 		double gunAdjust = Utils.normalRelativeAngle(absFutureBearing
-				- pr.getGunHeadingRadians() );
+				- pr.getGunHeadingRadians());
 
 		pr.setTurnGunRightRadians(gunAdjust);
+
+		if (pr.getGunHeat() == 0 && Math.abs(pr.getGunTurnRemaining()) < 10)
+			pr.setFireBullet(power);
 		
-		if (pr.getGunHeat() == 0 &&  Math.abs(pr.getGunTurnRemaining()) < 10)
-			pr.setFireBullet(power) ;
+		return true;
 	}
-	
-	
-
-
 
 	private double evaluate(int i) {
-		
-		double evaluation=0;
-		for(int j=i;j<LAST_MOVEMENT_SIZE+i;j++){
-			
-			EnemyMovement movementToEvaluate=logEnemy.get(j);
-			EnemyMovement currentEvaluate=logEnemy.get(logEnemy.size() - LAST_MOVEMENT_SIZE + (j-i) );
-			
-			evaluation+=currentEvaluate.compare(movementToEvaluate);
+
+		double evaluation = 0;
+		for (int j = i; j < LAST_MOVEMENT_SIZE + i; j++) {
+
+			EnemyMovement movementToEvaluate = logEnemy.get(j);
+			EnemyMovement currentEvaluate = logEnemy.get(logEnemy.size()
+					- LAST_MOVEMENT_SIZE + (j - i));
+
+			evaluation += currentEvaluate.compare(movementToEvaluate);
 		}
-		
+
 		return evaluation;
 	}
 
+	public void addLogMovement(ScannedRobotEvent e, Point2D.Double enemyLocation) {
+		if (e.getTime() % TICK_SCAN == 0)
+			return;
 
-
-	public void addLogMovement(ScannedRobotEvent e,Point2D.Double enemyLocation) {
 		double deltaVelocity = 0;
 		double deltaHeading = 0;
-		double deltaDistance =0;
+		double deltaDistance = 0;
 
-
-		
-		if(logEnemy.size()>0){
-			EnemyMovement lastMovement=logEnemy.get(logEnemy.size()-1);
+		if (logEnemy.size() > 0) {
+			EnemyMovement lastMovement = logEnemy.get(logEnemy.size() - 1);
 			deltaVelocity = Math.abs(lastMovement.velocity - e.getVelocity());
-			deltaHeading = Math.abs(lastMovement.heading - e.getHeadingRadians());
-			deltaDistance = Math.abs(lastMovement.location.distance(enemyLocation));
-		}				
-		
-		EnemyMovement movement = new EnemyMovement(e.getVelocity(), e.getHeadingRadians(), enemyLocation, deltaVelocity, deltaHeading, deltaDistance);
-		
+			deltaHeading = Math.abs(lastMovement.heading
+					- e.getHeadingRadians());
+			deltaDistance = Math.abs(lastMovement.location
+					.distance(enemyLocation));
+		}
+
+		EnemyMovement movement = new EnemyMovement(e.getVelocity(),
+				e.getHeadingRadians(), enemyLocation, deltaVelocity,
+				deltaHeading, deltaDistance);
+
 		logEnemy.add(movement);
 	}
 
-
-
-
-
 	public void onRobotDeath(RobotDeathEvent e) {
-		
+
 	}
-
-
-
-
 
 	public void onPaint(Graphics2D g) {
-		if(logEnemy.size()<LAST_MOVEMENT_SIZE)return;
-		
+		if (logEnemy.size() < LAST_MOVEMENT_SIZE)
+			return;
+
 		g.setColor(Color.RED);
-		
-		g.drawRect((int)enemyFutureLocation.x, (int)enemyFutureLocation.y, 10, 10);
-		
-		Point2D.Double location=enemyLocation;
-		for(int i=0;i<LAST_MOVEMENT_SIZE;i++){
-			EnemyMovement movement=logEnemy.get(logEnemy.size()-1-i);
-			location=TriUtil.project(location, movement.dHeading, movement.dDistance);
-			
+
+		g.drawRect((int) enemyFutureLocation.x, (int) enemyFutureLocation.y,
+				10, 10);
+
+		Point2D.Double location = enemyLocation;
+		for (int i = 0; i < LAST_MOVEMENT_SIZE; i++) {
+			EnemyMovement movement = logEnemy.get(logEnemy.size() - 1 - i);
+			location = TriUtil.project(location, movement.dHeading,
+					movement.dDistance);
+
 			g.setColor(Color.GREEN);
-			
-			g.drawRect((int)movement.location.x, (int)movement.location.y, 10, 10);
+
+			g.drawRect((int) movement.location.x, (int) movement.location.y,
+					10, 10);
 		}
-		
+
 	}
 
-
-
 	public void onHitByBullet(HitByBulletEvent event) {
-		
+
 	}
 
 }
