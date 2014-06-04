@@ -11,18 +11,25 @@ import robocode.RobotDeathEvent;
 import robocode.ScannedRobotEvent;
 import robocode.util.Utils;
 
+
 class EnemyMovement {
+	// Enemy velocity
 	double velocity;
+	// Enemy heading
 	double heading;
+	// Enemy location
 	Point2D.Double location;
 
+	// Delta = difference between one step ago and now
+	// Delta velocity
 	double dVelocity;
+	// Delta heading
 	double dHeading;
+	// Delta distance
 	double dDistance;
 
 	public EnemyMovement(double velocity, double heading, Double location,
 			double dVelocity, double dHeading, double dDistance) {
-		super();
 		this.velocity = velocity;
 		this.heading = heading;
 		this.location = location;
@@ -31,11 +38,15 @@ class EnemyMovement {
 		this.dDistance = dDistance;
 	}
 
+	// Compare the movement with mov
 	double compare(EnemyMovement mov) {
+		//Normalize the variable
 		double maxVelocity = 8.0;
 		double maxHeading = (10 - 0.75 * Math.abs(velocity));
 		double maxDistance = velocity * PatternMatching.TICK_SCAN;
 
+		//Calculate the Euclidean distance
+		
 		double distanceVelocity = Math.pow(Math.abs(dVelocity / maxVelocity)
 				- Math.abs(mov.dVelocity / maxVelocity), 2);
 		double distanceHeading = Math.pow(dHeading / maxHeading - mov.dHeading
@@ -59,18 +70,22 @@ public class PatternMatching {
 		this.pr = pr;
 	}
 
-	final static int TICK_SCAN = 5;
-	static final double FIRING_THRESHOLD = 0.01;
+	// Tick elapsed between each scan
+	final static int TICK_SCAN = 3;
+	// THRESHOLD for the pattern evaluation that if is < not fire
+	static final double FIRING_THRESHOLD = 0.3;
 
-	final int LAST_MOVEMENT_SIZE = 5;
+	// Last movement to search in the log movement
+	final int LAST_MOVEMENT_SIZE = 10;
 
 	Point2D.Double enemyLocation;
 	Point2D.Double enemyFutureLocation;
 
 	public boolean noGuessFactorIJustFire(ScannedRobotEvent e, double the_power) {
-
+		// In melee not use pattern matching
 		if(pr.getOthers() > 1)
 			return false;
+		
 		// Bearing betwen Peluria-Bot and enemy
 		double absBearing = pr.getHeadingRadians() + e.getBearingRadians();
 		// Enemy Location
@@ -78,14 +93,20 @@ public class PatternMatching {
 				new Point2D.Double(pr.getX(), pr.getY()), absBearing,
 				e.getDistance());
 
+		// Add movement in log
 		addLogMovement(e, enemyLocation);
 
 		int bestPattern = 0;
 		double bestEvaluation = Integer.MAX_VALUE;
+		
+		// Peluria-Bot search in the log the movement pattern until the pattern in the log
+		// If the log is small stop not fire
 		if (logEnemy.size() - 2 * LAST_MOVEMENT_SIZE + 1 <= 0)
 			return false;
 		
+		//Evaluate the pattern movement of enemy
 		for (int i = 0; i < logEnemy.size() - 2 * LAST_MOVEMENT_SIZE + 1; i++) {
+			//Evaluate the  i movement
 			double evaluationPattern = evaluate(i);
 
 			if (evaluationPattern < bestEvaluation) {
@@ -98,26 +119,31 @@ public class PatternMatching {
 		if(bestEvaluation > FIRING_THRESHOLD)
 			return false;
 		
+		// Pick the future movement after the pattern
 		bestPattern += LAST_MOVEMENT_SIZE;
+		
 		double power = the_power;
 		double powerVel = 20 - 3 * power;
 
 		double timeImpact = e.getDistance() / powerVel;
 
+		// Estimate the future position of enemy based on the velocity of bullet
 		int indexFutureMovement = (int) (timeImpact / TICK_SCAN);
 
+		// If the index exceeded the log not fire
 		if (bestPattern + indexFutureMovement > logEnemy.size())
 			return false;
 
+		// Calculate the future location of enemy based on the log movement
 		double angleFuture = 0;
 		double futureDistance = 0;
 		for (int i = bestPattern; i < bestPattern + indexFutureMovement; i++) {
 			angleFuture += logEnemy.get(i).dHeading;
 			futureDistance += logEnemy.get(i).dDistance;
 		}
-
 		enemyFutureLocation = TriUtil.project(enemyLocation, angleFuture,
 				futureDistance);
+		
 		double absFutureBearing = TriUtil.absoluteBearing(pr.getX(), pr.getY(),
 				enemyFutureLocation.x, enemyFutureLocation.y);
 
@@ -126,21 +152,24 @@ public class PatternMatching {
 
 		pr.setTurnGunRightRadians(gunAdjust);
 
-		if (pr.getGunHeat() == 0 && Math.abs(pr.getGunTurnRemaining()) < 10)
+		if (pr.getGunHeat() == 0 && Math.abs(pr.getGunTurnRemaining()) < GuessFactorTargeting.TURN_REMAINING)
 			pr.setFireBullet(power);
-		
+		System.out.println("PATTERN MATCHING");
 		return true;
 	}
 
+	// Evaluate the pattern movement starting from i
 	private double evaluate(int i) {
 
 		double evaluation = 0;
 		for (int j = i; j < LAST_MOVEMENT_SIZE + i; j++) {
 
+			// Movement done in the past
 			EnemyMovement movementToEvaluate = logEnemy.get(j);
+			// Movement done in the current time
 			EnemyMovement currentEvaluate = logEnemy.get(logEnemy.size()
 					- LAST_MOVEMENT_SIZE + (j - i));
-
+			//Sum the distance between the movement
 			evaluation += currentEvaluate.compare(movementToEvaluate);
 		}
 
@@ -148,7 +177,8 @@ public class PatternMatching {
 	}
 
 	public void addLogMovement(ScannedRobotEvent e, Point2D.Double enemyLocation) {
-		if (e.getTime() % TICK_SCAN == 0)
+		// Add movement each TICK_SCAN
+		if (e.getTime() % TICK_SCAN != 0)
 			return;
 
 		double deltaVelocity = 0;
@@ -157,6 +187,7 @@ public class PatternMatching {
 
 		if (logEnemy.size() > 0) {
 			EnemyMovement lastMovement = logEnemy.get(logEnemy.size() - 1);
+			//Calculate the delta velocity,heading and distance
 			deltaVelocity = Math.abs(lastMovement.velocity - e.getVelocity());
 			deltaHeading = Math.abs(lastMovement.heading
 					- e.getHeadingRadians());

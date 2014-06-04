@@ -16,34 +16,29 @@ class Enemy {
 	double bearing;
 	double heading;
 	double velocity;
-	boolean isSentryRobot;
 
-	// 1 not very dangerous 2 normal 3 dangerous
+	// True if the enemy hit Peluria-Bot
 	boolean priority = false;
 	long timeFired;
-	
 
 	// This is a constructor
-	Enemy(String name, double currentEnergy, double distance, double bearing,
-			double heading, double velocity, boolean isSentryRobot) {
+	Enemy(String name, double currentEnergy, double distance, double bearing, double heading, double velocity, boolean isSentryRobot) {
 		this.name = name;
 		this.currentEnergy = currentEnergy;
 		this.distance = distance;
 		this.bearing = bearing;
 		this.heading = heading;
 		this.velocity = velocity;
-		this.isSentryRobot = isSentryRobot;
 	}
 
 	// this too
 	public Enemy() {
 		name = "";
 		currentEnergy = distance = bearing = heading = velocity = 0.0;
-		isSentryRobot = false;
 	}
 }
 
-public class MeleeTargeting {
+public class BotTargeting {
 
 	PeluriaRobot pr;
 
@@ -55,41 +50,33 @@ public class MeleeTargeting {
 	// this is THE enemy that we want to fire.
 	Enemy target;
 	// This is the class of the MELEE Movement, with the strategy Minimum Risk
-	BotMovement mrm;
+	BotMovement botMovement;
 
-	// Here, we have two threshold.
+	// weight to give at the distance enemy
 	double distanceThreshold = 3;
 	// This one is relative at the potentially dangerous robot, because we want
-	// to (must to decide)ignore/kill the enemy that have the energy less than
+	// to kill the enemy that have the energy less than
 	// this threshold
 	double dangerousThreshold = 20;
-	
+
+	// Time elapsed between fires, if the enemy don't shoot Peluria-Bot we have
+	// to set priority false
 	double timeFiredThreshold = 150;
 
-	public MeleeTargeting(PeluriaRobot pr, BotMovement mrm) {
+	public BotTargeting(PeluriaRobot pr, BotMovement mrm) {
 		this.pr = pr;
 		mapOfEnemy = new HashMap<String, Enemy>();
 		mapOfGuessFactor = new HashMap<String, GuessFactorTargeting>();
 		target = new Enemy();
-		this.mrm = mrm;
+		this.botMovement = mrm;
 	}
 
-	/** onScannedRobot PART **/
-
-	// This function at the first scanned all robot of the battle. Know that we
-	// need 8 tick to scanned all robot (we're not optimist, will say later why)
-	// Later perform the current Target. At the first is the nearest in the
-	// battle to Peluria Robot.
-	// Later is the most dangerous (this is perform in the function
-	// getTheClosestEnemy( ... )
-	// When I choose the target I set his GuessFactor and fire against him
+	// This function at the first scanned all robot of the battle
 	public void onScannedRobot(ScannedRobotEvent event) {
+		// need 8 tick to scanned all robot
 		if (event.getTime() < 8.0) {
 			Enemy enemy = null;
-			enemy = new Enemy(event.getName(), event.getEnergy(),
-					event.getDistance(), event.getBearingRadians(),
-					event.getHeadingRadians(), event.getVelocity(),
-					event.isSentryRobot());
+			enemy = new Enemy(event.getName(), event.getEnergy(), event.getDistance(), event.getBearingRadians(), event.getHeadingRadians(), event.getVelocity(), event.isSentryRobot());
 			mapOfEnemy.put(enemy.name, enemy);
 			mapOfGuessFactor.put(enemy.name, new GuessFactorTargeting(pr));
 		} else {
@@ -98,10 +85,7 @@ public class MeleeTargeting {
 			// If this is not present jet, I put him in the map.
 			if (!mapOfEnemy.containsKey(event.getName())) {
 				Enemy enemy = null;
-				enemy = new Enemy(event.getName(), event.getEnergy(),
-						event.getDistance(), event.getBearingRadians(),
-						event.getHeadingRadians(), event.getVelocity(),
-						event.isSentryRobot());
+				enemy = new Enemy(event.getName(), event.getEnergy(), event.getDistance(), event.getBearingRadians(), event.getHeadingRadians(), event.getVelocity(), event.isSentryRobot());
 				mapOfEnemy.put(enemy.name, enemy);
 				mapOfGuessFactor.put(enemy.name, new GuessFactorTargeting(pr));
 			}
@@ -110,14 +94,7 @@ public class MeleeTargeting {
 
 			target = getTarget();
 
-			/** SOME STAMPS FOR DEBUGGING **/
-//			for (Enemy e : mapOfEnemy.values()) {
-//				System.out.println(e.name + " PRIORITY: " + e.priority);
-//			}
-//			System.out.println("TARGET: " + target.name);
-			/** END **/
-
-			// When I know who's the target, I fire him.
+			// When I know who's the target, I fire
 			if (target.name == event.getName()) {
 				for (String name : mapOfGuessFactor.keySet()) {
 					if (name == target.name) {
@@ -130,21 +107,24 @@ public class MeleeTargeting {
 	}
 
 	private Enemy getTarget() {
+
 		if (mapOfEnemy.size() == 1) {
 			return mapOfEnemy.values().iterator().next();
 		}
+
 		Enemy enemyToReturn = getTheClosestEnemyThatFireMe();
+		// No enemy fire Peluria-Bot
 		if (enemyToReturn == null) {
-			if (getLowEnemy() != null) {
-				enemyToReturn = getLowEnemy();
-			} else
+			// Get the enemy with the energy is lower than threshold
+			enemyToReturn = getLowEnemy();
+			if (getLowEnemy() == null)
 				enemyToReturn = getTheClosestEnemy();
 		}
-//		System.out.println(enemyToReturn.name);
-		mrm.setTarget(enemyToReturn.name);
+		botMovement.setTarget(enemyToReturn.name);
 		return enemyToReturn;
 	}
 
+	// Return the Enemy with the energy lower than threshold
 	private Enemy getLowEnemy() {
 		Enemy enemyToReturn = null;
 		for (Enemy e : mapOfEnemy.values()) {
@@ -171,18 +151,20 @@ public class MeleeTargeting {
 				e.velocity = event.getVelocity();
 				e.distance = event.getDistance();
 			}
-			
-			if(pr.getTime() - e.timeFired > timeFiredThreshold)
-				e.priority=false;
-			
+
+			if (pr.getTime() - e.timeFired > timeFiredThreshold)
+				e.priority = false;
+
 		}
 
 	}
 
-	private double getCoefficentTarget(Enemy e){
+	// Coefficent based on the distance of the enemy and the energy
+	private double getCoefficentTarget(Enemy e) {
 		return distanceThreshold / e.distance + 1 / e.currentEnergy;
 	}
-	
+
+	// Get the best enemy to shoot among the enemy that fire me
 	private Enemy getTheClosestEnemyThatFireMe() {
 		Enemy enemyToReturn = null;
 		for (Enemy e : mapOfEnemy.values()) {
@@ -201,6 +183,7 @@ public class MeleeTargeting {
 		return enemyToReturn;
 	}
 
+	// Get the best enemy to shoot
 	private Enemy getTheClosestEnemy() {
 		Enemy enemyToReturn = target;
 		double max_value = Integer.MIN_VALUE;
@@ -215,24 +198,14 @@ public class MeleeTargeting {
 		return enemyToReturn;
 	}
 
-	/** END onScannedRobot part **/
-
-	/** onHitBullet part **/
-
 	public void onHitByBullet(HitByBulletEvent event) {
 		// If someone fire me and is relatively near to me thus this is the
 		// target
-		getTheCurrentEnemy(event.getName());
-	}
-
-	private void getTheCurrentEnemy(String name) {
-		if(mapOfEnemy.get(name) != null){
-			mapOfEnemy.get(name).priority = true;
-			mapOfEnemy.get(name).timeFired=pr.getTime();
+		if (mapOfEnemy.get(event.getName()) != null) {
+			mapOfEnemy.get(event.getName()).priority = true;
+			mapOfEnemy.get(event.getName()).timeFired = pr.getTime();
 		}
 	}
-
-	/** END onHitBullet part **/
 
 	public void onRobotDeath(RobotDeathEvent e) {
 		mapOfEnemy.remove(e.getName());
@@ -240,8 +213,7 @@ public class MeleeTargeting {
 	}
 
 	public void onPaint(Graphics2D g) {
-		
-		
+
 		for (String name : mapOfGuessFactor.keySet()) {
 			if (name == target.name) {
 				mapOfGuessFactor.get(name).onPaint(g);

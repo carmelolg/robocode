@@ -14,23 +14,24 @@ import robocode.ScannedRobotEvent;
 public class PeluriaRobot extends AdvancedRobot {
 
 	BotMovement movement = new MinimumRiskMovement(this);
-//	WaveSurfingMovement wsm=new WaveSurfingMovement(this);
-	MeleeTargeting mt = new MeleeTargeting(this, movement);
-	
-//	PatternMatching mt=new PatternMatching(this);
+	BotTargeting targeting = new BotTargeting(this, movement);
 
 	public void run() {
 		movement.init();
 
+		// Sets the radar and gun to turn independent from the robot's turn.
 		setAdjustGunForRobotTurn(true);
-		setAdjustRadarForGunTurn(true);
 		setAdjustRadarForRobotTurn(true);
-		setColors(Color.RED, Color.WHITE, Color.LIGHT_GRAY);
-		setBulletColor(Color.RED);
-		setRadarColor(Color.LIGHT_GRAY);
-		turnRadarRightRadians(2*Math.PI);
-		
-		for(;;){
+
+		// Sets the radar to turn independent from the gun robot.
+		setAdjustRadarForGunTurn(true);
+
+		// Set Peluria-Bot battle skin
+		setColors(Color.WHITE, Color.BLACK, Color.BLACK);
+		setBulletColor(Color.PINK);
+		setScanColor(Color.PINK);
+
+		for (;;) {
 			movement.run();
 			execute();
 		}
@@ -39,30 +40,31 @@ public class PeluriaRobot extends AdvancedRobot {
 	@Override
 	public void onScannedRobot(ScannedRobotEvent event) {
 		movement.onScannedRobot(event);
-		mt.onScannedRobot(event);
+		targeting.onScannedRobot(event);
 	}
 
 	@Override
 	public void onHitByBullet(HitByBulletEvent event) {
 		movement.onHitByBullet(event);
-		mt.onHitByBullet(event);
+		targeting.onHitByBullet(event);
 	}
-	
+
 	@Override
 	public void onRobotDeath(RobotDeathEvent e) {
 		movement.onRobotDeath(e);
-		mt.onRobotDeath(e);
+		targeting.onRobotDeath(e);
 	}
 
-	
 	@Override
 	public void onPaint(Graphics2D g) {
 		movement.onPaint(g);
-		mt.onPaint(g);
+		targeting.onPaint(g);
 	}
-	
-	public void changeWaveMovement(){
-		if(movement instanceof WaveSurfingMovement)return;
+
+	// Change to 1 vs 1 movement
+	public void changeWaveMovement() {
+		if (movement instanceof WaveSurfingMovement)
+			return;
 		movement = new WaveSurfingMovement(this);
 		movement.init();
 	}

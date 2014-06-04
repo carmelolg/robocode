@@ -12,14 +12,13 @@ import robocode.RobotDeathEvent;
 import robocode.ScannedRobotEvent;
 import robocode.util.Utils;
 
-
 public class MinimumRiskMovement implements BotMovement {
 
 	// Map Name , Enemy
 	HashMap<String, EnemyInfo> enemies = new HashMap<String, EnemyInfo>();
 	// The current enemy target
 	EnemyInfo target;
-	
+
 	// Next location to arrive
 	Point2D.Double nextLocation;
 	// Previous location
@@ -30,7 +29,8 @@ public class MinimumRiskMovement implements BotMovement {
 	double myEnergy;
 
 	// The offset of distance between current location and next location
-	// If distance of myLocation and nextLocation > of DISTANCE_NEXT_OFFSET choose new nextLocation
+	// If distance of myLocation and nextLocation > of DISTANCE_NEXT_OFFSET
+	// choose new nextLocation
 	final double DISTANCE_NEXT_OFFSET = 15;
 	// Point generated each time choose nextLocation
 	final double POINT_GEN = 200;
@@ -42,10 +42,12 @@ public class MinimumRiskMovement implements BotMovement {
 	final double DISTANCE_MYLOCATION = 50;
 	// Threshold for go more distance from enemy
 	final double DISTANCE_ENEMY = 3;
-	
+
 	// Battlefield
 	static Rectangle2D.Double battleField;
-	
+	Point2D.Double battlefieldCenter ;
+
+
 	// Peluria-Bot
 	PeluriaRobot pr;
 
@@ -58,14 +60,12 @@ public class MinimumRiskMovement implements BotMovement {
 		target = null;
 		nextLocation = myLocation;
 		lastLocation = myLocation;
-		// Set battlefield lower than real battlefield to avoid wall 
+		// Set battlefield lower than real battlefield to avoid wall
 		battleField = new Rectangle2D.Double(50, 50, pr.getBattleFieldWidth() - 100, pr.getBattleFieldHeight() - 100);
-		
-		// Set Peluria-Bot color
-		pr.setColors(Color.LIGHT_GRAY, Color.LIGHT_GRAY, Color.LIGHT_GRAY);
+		battlefieldCenter = new Point2D.Double(pr.getBattleFieldWidth() / 2, pr.getBattleFieldHeight() / 2);
+
 		pr.setScanColor(Color.red);
 	}
-
 
 	// Call in loop in Peluria-Bot run()
 	public void run() {
@@ -73,13 +73,13 @@ public class MinimumRiskMovement implements BotMovement {
 		// Take energy and location
 		myLocation = new Point2D.Double(pr.getX(), pr.getY());
 		myEnergy = pr.getEnergy();
-		
+
 		// Move radar
 		// Turn radar like there's no tomorrow
-		pr.setTurnRadarRightRadians(Double.POSITIVE_INFINITY  );
+		pr.setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
 
 		// If target is live Move
-		if (target!=null) {
+		if (target != null) {
 			doMovement();
 		}
 	}
@@ -93,7 +93,7 @@ public class MinimumRiskMovement implements BotMovement {
 		// search a new destination if Peluria-Bot reached nextDestination
 		if (distanceToNextDestination < DISTANCE_NEXT_OFFSET) {
 
-			//Generate new destination
+			// Generate new destination
 			nextLocation = getNextPoint();
 
 			// Save last location
@@ -102,25 +102,24 @@ public class MinimumRiskMovement implements BotMovement {
 		} else {
 
 			// Go to the current destination
-			
+
 			// Calculate the angle to reach the destination
 			double angle = TriUtil.absoluteBearing(myLocation, nextLocation) - pr.getHeadingRadians();
-			
+
 			// Calculate the direction
 			int direction = 1;
 			if (Math.cos(angle) < 0) {
 				angle += Math.PI;
 				direction = -1;
 			}
-			
 
 			// Go to the direction
 			pr.setAhead(distanceToNextDestination * direction);
 			angle = Utils.normalRelativeAngle(angle);
-			pr.setTurnRightRadians(angle );
-			
+			pr.setTurnRightRadians(angle);
+
 			// Set the velocity based on the angle to turn
-			pr.setMaxVelocity(TriUtil.limit(0,(1 - (Math.abs(angle)  / Math.PI) ) * 8.0, 8.0));
+			pr.setMaxVelocity(TriUtil.limit(0, (1 - (Math.abs(angle) / Math.PI)) * 8.0, 8.0));
 
 		}
 
@@ -129,55 +128,58 @@ public class MinimumRiskMovement implements BotMovement {
 	// Generate the point and choose the best
 	public Point2D.Double getNextPoint() {
 		// Point generated
-		Point2D.Double testPoint =null;
+		Point2D.Double testPoint = null;
 		// Best point generated
 		Point2D.Double bestPoint = null;
 		// Distance to the current taget
 		double distanceToTarget = myLocation.distance(target.location);
-		
+
 		// Generation of points
-		for(int i=0;i<POINT_GEN;i++){
+		for (int i = 0; i < POINT_GEN; i++) {
 			// Generate the point and verify if is the best
 			testPoint = generatePoint(distanceToTarget);
 			if (battleField.contains(testPoint) && (bestPoint == null || riskEvaluation(testPoint) < riskEvaluation(bestPoint))) {
 				bestPoint = testPoint;
 			}
-		} 
+		}
 
 		return bestPoint;
 	}
 
-
 	// Generate the point projecting the current location in :
 	// random angle between 0 and 2*Math.PI(360)
 	// random distance between MIN_DISTANCE_MYLOCATION and DISTANCE_MYLOCATION
-	// if the distance is > than the MIN_DISTANCE_TARGET % than take the last as distance
+	// if the distance is > than the MIN_DISTANCE_TARGET % than take the last as
+	// distance
 	public Point2D.Double generatePoint(double distanceToTarget) {
 		return TriUtil.project(myLocation, 2 * Math.PI * Math.random(), Math.min(distanceToTarget * MIN_DISTANCE_TARGET, MIN_DISTANCE_MYLOCATION + DISTANCE_MYLOCATION * Math.random()));
 	}
 
 	//
 	public double riskEvaluation(Point2D.Double point) {
-		
-		Point2D.Double battlefieldCenter=new Point2D.Double(pr.getBattleFieldWidth()/2,pr.getBattleFieldHeight()/2);
+
 
 		// Coulomb's law , The force of attraction is inversely proportional to
 		// the square of the distance
-		// The risk start to the inverse of distance with last location and the target location
-		// Last location because Peluria-Bot have to avaid to stay in the same place much time
-		double eval = 1 / point.distanceSq(lastLocation) + 1 /point.distanceSq(battlefieldCenter);
+		// The risk start to the inverse of distance with last location and the
+		// target location
+		// Last location because Peluria-Bot have to avaid to stay in the same
+		// place much time
+		double eval = 1 / point.distanceSq(lastLocation) + 1 / point.distanceSq(battlefieldCenter);
 
-		
 		for (String key : enemies.keySet()) {
 			EnemyInfo en = enemies.get(key);
 			// For each enemy:
-			// - Math.min(en.energy/myEnergy,2) is an indicator how dangerous is enemy
+			// - Math.min(en.energy/myEnergy,2) is an indicator how dangerous is
+			// enemy
 			// - Math.abs(Math.cos(calcAngle(myPos, p) - calcAngle(en.pos, p)))
-			// is bigger if the moving direction is parallel to the enemy, Peluria-Bot tries move perpendicular
-			// - en.damage / p.distanceSq(en.pos) proportionally to the distance and the damage caused by the enemy
+			// is bigger if the moving direction is parallel to the enemy,
+			// Peluria-Bot tries move perpendicular
+			// - DISTANCE_ENEMY / point.distanceSq(en.location) proportionally to the distance
+			// and the damage caused by the enemy
 			if (en.live) {
-				eval += Math.min(en.energy / myEnergy, 2) * (1 + Math.abs(Math.cos(TriUtil.absoluteBearing(point, myLocation) - TriUtil.absoluteBearing(point, en.location)))) *
-						DISTANCE_ENEMY / point.distanceSq(en.location);
+				eval += Math.min(en.energy / myEnergy, 2) * (1 + Math.abs(Math.cos(TriUtil.absoluteBearing(point, myLocation) - TriUtil.absoluteBearing(point, en.location)))) * DISTANCE_ENEMY
+						/ point.distanceSq(en.location);
 			}
 		}
 		return eval;
@@ -199,8 +201,8 @@ public class MinimumRiskMovement implements BotMovement {
 		en.bearing = pr.getHeadingRadians() + e.getBearingRadians();
 		en.location = TriUtil.project(myLocation, pr.getHeadingRadians() + e.getBearingRadians(), e.getDistance());
 
-		if(target==null)
-			target=en;
+		if (target == null)
+			target = en;
 
 		// Change in one vs one mode movement
 		if (pr.getOthers() == 1)
@@ -214,60 +216,57 @@ public class MinimumRiskMovement implements BotMovement {
 
 	// When Peluria-Bot is hit by bullet
 	public void onHitByBullet(HitByBulletEvent event) {
-		enemies.get(event.getName()).damage=enemies.get(event.getName()).damage+0.1;
 	}
 
 	public void onPaint(Graphics2D g) {
-		if(target==null)return;
-		
-//		g.setColor(Color.GREEN);
-//		Point2D.Double battlefieldCenter=new Point2D.Double(pr.getBattleFieldWidth()/2,pr.getBattleFieldHeight()/2);
-//		g.drawRect((int)battlefieldCenter.x, (int)battlefieldCenter.y, 10, 10);
-		
-		
+		if (target == null)
+			return;
+
+		// g.setColor(Color.GREEN);
+		// Point2D.Double battlefieldCenter=new
+		// Point2D.Double(pr.getBattleFieldWidth()/2,pr.getBattleFieldHeight()/2);
+		// g.drawRect((int)battlefieldCenter.x, (int)battlefieldCenter.y, 10,
+		// 10);
+
 		g.setColor(Color.GREEN);
-		g.drawRect((int)nextLocation.x, (int)nextLocation.y, 10, 10);
-		
+		g.drawRect((int) nextLocation.x, (int) nextLocation.y, 10, 10);
+
 		g.setColor(Color.RED);
-		g.drawRect((int)target.location.x, (int)target.location.y, 20, 20);
-		
-		ArrayList<Point2D.Double> points=new ArrayList<Point2D.Double>();
-				
+		g.drawRect((int) target.location.x, (int) target.location.y, 20, 20);
+
+		ArrayList<Point2D.Double> points = new ArrayList<Point2D.Double>();
+
 		Point2D.Double testPoint;
-		double max=0;
+		double max = 0;
 		double distanceToTarget = myLocation.distance(target.location);
-		int i=0;
-		
+		int i = 0;
+
 		do {
 			testPoint = generatePoint(distanceToTarget);
-			if(battleField.contains(testPoint) ) {
+			if (battleField.contains(testPoint)) {
 				points.add(testPoint);
-				if(riskEvaluation(testPoint)>max)
-					max=riskEvaluation(testPoint);
+				if (riskEvaluation(testPoint) > max)
+					max = riskEvaluation(testPoint);
 			}
-		} while(i++ < POINT_GEN);
-		
-		
-		for(Point2D.Double p : points){
-			int colorRisk=(int)(riskEvaluation(p)/max * 255);
-			g.setColor(new Color(colorRisk,0,255-colorRisk));
-			g.fillRect((int)p.x, (int)p.y, 5, 5);
+		} while (i++ < POINT_GEN);
+
+		for (Point2D.Double p : points) {
+			int colorRisk = (int) (riskEvaluation(p) / max * 255);
+			g.setColor(new Color(colorRisk, 0, 255 - colorRisk));
+			g.fillRect((int) p.x, (int) p.y, 5, 5);
 		}
 	}
-	
-	public void setTarget(String name){
-		if(enemies.get(name)!=null)
-			this.target.location=enemies.get(name).location;
+
+	public void setTarget(String name) {
+		if (enemies.get(name) != null)
+			this.target.location = enemies.get(name).location;
 	}
-	
-	
+
 }
 
 class EnemyInfo {
-
 	public Point2D.Double location;
 	public double energy;
 	public boolean live;
 	public double bearing;
-	public double damage;
 }
